@@ -1,0 +1,104 @@
+{
+  "orders": [
+    {
+      "id": "c370437d-2302-419f-9264-d2f53cf86e1f",
+      "createdAt": 1790332001534,
+      "mode": "delivery",
+      "customer": {
+        "name": "Rafi",
+        "phone": "01712345678",
+        "address": "House 12, Road 5, Gulshan 1"
+      },
+      "lines": [
+        {
+          "id": "kacchi-biryani",
+          "name": "Old Dhaka Kacchi",
+          "price": 750,
+          "qty": 2,
+          "cuisine": "deshi"
+        },
+        {
+          "id": "mango-lassi",
+          "name": "Rajshahi Mango Lassi",
+          "price": 250,
+          "qty": 1,
+          "cuisine": "drinks"
+        }
+      ],
+      "totals": {
+        "subtotal": 1750,
+        "vat": 88,
+        "delivery": 0,
+        "total": 1838
+      },
+      "payment": {
+        "method": "bkash",
+        "status": "paid"
+      },
+      "status": "out",
+      "timeline": [
+        {
+          "status": "placed",
+          "at": 1790332001534
+        },
+        {
+          "status": "accepted",
+          "at": 1790332006164
+        },
+        {
+          "status": "cooking",
+          "at": 1790332006181
+        },
+        {
+          "status": "ready",
+          "at": 1790332006196
+        },
+        {
+          "status": "out",
+          "at": 1790332006227
+        }
+      ],
+      "code": "BM-1001"
+    },
+    {
+      "id": "11a1975e-f6b3-4af1-a996-11462439e3d3",
+      "createdAt": 1790332023771,
+      "mode": "delivery",
+      "customer": {
+        "name": "Eusha Ibna Akbor",
+        "phone": "01918331878",
+        "address": "Horogram Poschimpara, Rajshahi"
+      },
+      "lines": [
+        {
+          "id": "ilish-bhapa",
+          "name": "Shorshe Ilish",
+          "price": 1200,
+          "qty": 2,
+          "cuisine": "deshi"
+        }
+      ],
+      "totals": {
+        "subtotal": 2400,
+        "vat": 120,
+        "delivery": 0,
+        "total": 2520
+      },
+      "payment": {
+        "method": "bkash",
+        "status": "paid"
+      },
+      "status": "placed",
+      "timeline": [
+        {
+          "status": "placed",
+          "at": 1790332023771
+        }
+      ],
+      "code": "BM-1002"
+    }
+  ],
+  "reservations": [],
+  "soldOut": [],
+  "seq": 1002
+}

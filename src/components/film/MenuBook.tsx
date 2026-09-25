@@ -7,6 +7,7 @@ import { menu, formatBDT, cuisineName } from "@/config/menu";
 import { useCart, flyToCart } from "@/lib/cart";
 import { dishImage } from "@/lib/dishImage";
 import { loadSequence } from "./frameLoader";
+import { drawFrame } from "./draw";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -33,12 +34,16 @@ const smooth = (t: number) => {
 
 type State = { frame: number; zoom: number; dish: number; cover: number };
 
+/** One clip opens the book, then one page-turn per dish — so the film covers `clips` dishes. */
+const dishCount = (meta: FilmMeta) => Math.min(menu.length, meta.clips);
+
 function stateAt(p: number, meta: FilmMeta): State {
-  const total = INTRO + menu.length * PER_DISH;
+  const n = dishCount(meta);
+  const total = INTRO + n * PER_DISH;
   let t = p * total;
   if (t < INTRO) return { frame: 0, zoom: 0, dish: -1, cover: 1 - smooth((t - INTRO * 0.6) / (INTRO * 0.4)) };
   t -= INTRO;
-  const k = Math.min(menu.length - 1, Math.floor(t / PER_DISH));
+  const k = Math.min(n - 1, Math.floor(t / PER_DISH));
   const local = t - k * PER_DISH;
   const per = meta.perClip;
   if (local < TURN) {
@@ -46,7 +51,8 @@ function stateAt(p: number, meta: FilmMeta): State {
   }
   const h = (local - TURN) / HOLD;
   const zoom = smooth(h / 0.28) * (1 - smooth((h - 0.78) / 0.22));
-  return { frame: (k + 1) * per - 1, zoom: k === menu.length - 1 ? smooth(h / 0.28) : zoom, dish: k, cover: 0 };
+  // the last dish stays zoomed so the section ends on an order prompt
+  return { frame: (k + 1) * per - 1, zoom: k === n - 1 ? smooth(h / 0.28) : zoom, dish: k, cover: 0 };
 }
 
 function DishPanel({ index, visible }: { index: number; visible: boolean }) {
@@ -61,7 +67,7 @@ function DishPanel({ index, visible }: { index: number; visible: boolean }) {
       aria-hidden={!visible}
     >
       <p className="mb-4 text-step--1 font-extrabold uppercase tracking-[0.18em] text-tomato">
-        {String(index + 1).padStart(2, "0")} / {menu.length} · {cuisineName(item.cuisine)}
+        {String(index + 1).padStart(2, "0")} / {String(menu.length).padStart(2, "0")} · {cuisineName(item.cuisine)}
       </p>
       <h3 className="puff puff-tomato text-step-6 md:text-step-7">{item.name}</h3>
       <p className="mt-4 text-step-1 font-extrabold text-ink md:text-step-2">{item.line}</p>
@@ -88,6 +94,7 @@ export default function MenuBook({ meta }: { meta: FilmMeta }) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const coverCopy = useRef<HTMLDivElement>(null);
+  const curtain = useRef<HTMLDivElement>(null);
   const [panel, setPanel] = useState<{ dish: number; show: boolean }>({ dish: 0, show: false });
 
   useEffect(() => {
@@ -127,8 +134,8 @@ export default function MenuBook({ meta }: { meta: FilmMeta }) {
         } else {
           dh0 = Math.min(H * 0.98, (W * 1.02) / meta.aspect);
           fx0 = 0.5; fy0 = 0.5; sx0 = 0.5; sy0 = 0.5;
-          dh1 = H * 1.7;
-          sx1 = 0.68; sy1 = 0.5;
+          dh1 = H * 1.45;
+          sx1 = 0.7; sy1 = 0.52;
         }
         const dh = dh0 + (dh1 - dh0) * z;
         const dw = dh * meta.aspect;
@@ -136,10 +143,7 @@ export default function MenuBook({ meta }: { meta: FilmMeta }) {
         const fy = fy0 + (DISH.y - fy0) * z;
         const sx = sx0 + (sx1 - sx0) * z;
         const sy = sy0 + (sy1 - sy0) * z;
-        ctx.fillStyle = meta.bg;
-        ctx.fillRect(0, 0, W, H);
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, sx * W - fx * dw, sy * H - fy * dh, dw, dh);
+        drawFrame(ctx, img, meta.bg, sx * W - fx * dw, sy * H - fy * dh, dw, dh);
       }
       // order panel follows the zoom
       const show = s.dish >= 0 && s.zoom > 0.65;
@@ -147,6 +151,11 @@ export default function MenuBook({ meta }: { meta: FilmMeta }) {
       if (pk !== lastPanel) {
         lastPanel = pk;
         setPanel({ dish: Math.max(0, s.dish), show });
+      }
+      // wavy cream panel slides in with the zoom and hides the book's edge behind the copy
+      if (curtain.current) {
+        const z = smooth(s.zoom);
+        curtain.current.style.transform = narrow() ? `translate3d(0, ${(1 - z) * 105}%, 0)` : `translate3d(${(z - 1) * 105}%, 0, 0)`;
       }
       if (coverCopy.current) {
         coverCopy.current.style.opacity = String(s.cover);
@@ -182,12 +191,23 @@ export default function MenuBook({ meta }: { meta: FilmMeta }) {
     };
   }, [meta]);
 
-  const length = Math.round((INTRO + menu.length * PER_DISH) * 70);
+  const length = Math.round((INTRO + dishCount(meta) * PER_DISH) * 70);
 
   return (
     <section ref={section} id="menu" className="relative" style={{ height: `${length}vh`, background: meta.bg }} aria-label="The menu">
       <div className="sticky top-0 h-dvh overflow-hidden">
         <canvas ref={canvas} className="absolute inset-0 h-full w-full" aria-hidden />
+
+        {/* the curtain: solid cream with a wavy leading edge (right edge on desktop, top edge on phones) */}
+        <div ref={curtain} className="absolute inset-x-0 bottom-0 h-[60%] will-change-transform md:inset-y-0 md:left-0 md:right-auto md:h-auto md:w-[46vw]" style={{ transform: "translate3d(-105%,0,0)" }} aria-hidden>
+          <div className="absolute inset-0 bg-paper" style={{ background: meta.bg }} />
+          <svg viewBox="0 0 100 1000" preserveAspectRatio="none" className="absolute inset-y-0 left-full hidden h-full w-[70px] md:block">
+            <path d="M0 0 H30 C80 120 80 260 40 380 C0 500 10 640 55 760 C85 850 70 940 30 1000 H0 Z" fill={meta.bg} />
+          </svg>
+          <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="absolute inset-x-0 bottom-full block h-[46px] w-full md:hidden">
+            <path d="M0 100 V60 C150 0 300 0 450 45 C600 90 780 90 1000 30 V100 Z" fill={meta.bg} />
+          </svg>
+        </div>
 
         <div ref={coverCopy} className="absolute bottom-[max(2rem,env(safe-area-inset-bottom))] left-5 max-w-[30ch] md:bottom-auto md:left-[5vw] md:top-1/2 md:-translate-y-1/2">
           <p className="mb-4 text-step--1 font-extrabold uppercase tracking-[0.18em] text-tomato">The menu</p>

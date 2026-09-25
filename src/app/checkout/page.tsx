@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: `Checkout — ${site.name}` };
 export default function CheckoutPage() {
   return (
     <>
-      <Nav transparent={false} />
+      <Nav />
       <main className="mx-auto max-w-[1200px] px-4 pb-24 pt-28 md:px-10 md:pt-32">
         <Checkout />
       </main>

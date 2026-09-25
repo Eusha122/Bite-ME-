@@ -25,28 +25,21 @@ const STAGE_COPY: Partial<Record<OrderStatus, string>> = {
 function StageArt({ status, lines }: { status: OrderStatus; lines: PublicOrder["lines"] }) {
   const hero = lines[0]?.id;
   return (
-    <div className="relative mx-auto flex aspect-square w-full max-w-[380px] items-center justify-center">
-      <div className="absolute inset-[12%] rounded-full bg-saffron/20 blur-3xl" />
-      {status === "cooking" &&
-        Array.from({ length: 9 }).map((_, k) => (
-          <span
-            key={k}
-            className="absolute bottom-[18%] h-16 w-6 origin-bottom rounded-full bg-gradient-to-t from-chili via-saffron to-transparent opacity-80 blur-[2px]"
-            style={{ left: `${22 + k * 7}%`, animation: `flame ${0.5 + (k % 3) * 0.17}s ease-in-out ${k * 0.07}s infinite` }}
-          />
-        ))}
+    <div className="relative mx-auto flex aspect-square w-full max-w-[380px] items-center justify-center overflow-hidden">
       {hero && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={dishImage(hero)}
           alt=""
-          className="relative z-10 w-[78%] animate-[float_5s_ease-in-out_infinite] drop-shadow-[0_30px_40px_rgba(0,0,0,.6)]"
-          style={{ filter: status === "placed" ? "grayscale(.6) brightness(.8)" : undefined }}
+          className={`relative z-10 w-[78%] drop-shadow-[0_24px_24px_rgba(42,26,16,.25)] ${status === "cooking" ? "animate-[float_1.6s_ease-in-out_infinite]" : "animate-[float_5s_ease-in-out_infinite]"}`}
+          style={{ filter: status === "placed" ? "grayscale(.5)" : undefined }}
         />
       )}
       {status === "out" && (
         <div className="absolute bottom-2 left-0 right-0 h-10 overflow-hidden">
-          <span className="absolute text-4xl" style={{ animation: "marquee 3s linear infinite reverse" }}>🛵</span>
+          <span className="absolute text-4xl" style={{ animation: "marquee 3s linear infinite reverse" }}>
+            🛵
+          </span>
         </div>
       )}
     </div>
@@ -76,11 +69,13 @@ export default function OrderTracker({ id }: { id: string }) {
   if (missing)
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <h1 className="font-display text-4xl">We can&apos;t find that order.</h1>
-        <Link href="/menu" className="text-saffron">Back to the menu →</Link>
+        <h1 className="puff text-4xl">We can&apos;t find that order.</h1>
+        <Link href="/menu" className="text-tomato">
+          Back to the menu →
+        </Link>
       </div>
     );
-  if (!order) return <div className="flex min-h-[50vh] items-center justify-center text-cream-dim">Finding your order…</div>;
+  if (!order) return <div className="flex min-h-[50vh] items-center justify-center text-ink-2">Finding your order…</div>;
 
   const flow = flowFor(order.mode);
   const idx = order.status === "cancelled" ? -1 : flow.indexOf(order.status);
@@ -90,17 +85,15 @@ export default function OrderTracker({ id }: { id: string }) {
   return (
     <div className="grid gap-10 md:grid-cols-2 md:items-center">
       <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-saffron">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-tomato">
           Order {order.code} · {order.mode === "dinein" ? `Table ${order.customer.table}` : order.mode}
         </p>
-        <h1 className="font-display text-[clamp(2.6rem,6vw,4.6rem)] font-light leading-[0.95]">
+        <h1 className="puff text-[clamp(2.6rem,6vw,4.6rem)] font-light leading-[0.95]">
           {statusLabel[order.status]}
-          <span className="text-saffron">.</span>
+          <span className="text-tomato">.</span>
         </h1>
-        <p className="mt-4 max-w-md text-cream/75">{STAGE_COPY[order.status]}</p>
-        {order.status !== "delivered" && order.status !== "cancelled" && (
-          <p className="mt-2 text-sm text-cream-dim">Estimated: {eta} · this page updates live</p>
-        )}
+        <p className="mt-4 max-w-md text-ink-2">{STAGE_COPY[order.status]}</p>
+        {order.status !== "delivered" && order.status !== "cancelled" && <p className="mt-2 text-sm text-ink-2">Estimated: {eta} · this page updates live</p>}
 
         <ol className="mt-10 flex flex-col">
           {flow.map((s, k) => {
@@ -109,15 +102,15 @@ export default function OrderTracker({ id }: { id: string }) {
             const time = at(s);
             return (
               <li key={s} className="relative flex gap-4 pb-6 last:pb-0">
-                {k < flow.length - 1 && <span className={`absolute left-[11px] top-7 h-[calc(100%-20px)] w-px ${k < idx ? "bg-saffron" : "bg-white/12"}`} />}
+                {k < flow.length - 1 && <span className={`absolute left-[11px] top-7 h-[calc(100%-20px)] w-px ${k < idx ? "bg-tomato" : "bg-paper-2"}`} />}
                 <span
-                  className={`relative mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] transition ${done ? "border-saffron bg-saffron text-ink" : "border-white/20 text-transparent"}`}
+                  className={`relative mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] transition ${done ? "border-tomato bg-tomato text-page" : "border-line text-transparent"}`}
                 >
-                  ✓{current && <span className="absolute inset-0 animate-ping rounded-full bg-saffron/60" />}
+                  ✓{current && <span className="absolute inset-0 animate-ping rounded-full bg-tomato/60" />}
                 </span>
                 <div className="flex flex-1 items-baseline justify-between gap-4">
-                  <span className={done ? "text-cream" : "text-cream-dim"}>{statusLabel[s]}</span>
-                  {time && <span className="text-xs tabular-nums text-cream-dim">{new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
+                  <span className={done ? "text-ink" : "text-ink-2"}>{statusLabel[s]}</span>
+                  {time && <span className="text-xs tabular-nums text-ink-2">{new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
                 </div>
               </li>
             );
@@ -127,26 +120,27 @@ export default function OrderTracker({ id }: { id: string }) {
 
       <div className="flex flex-col gap-6">
         <StageArt status={order.status} lines={order.lines} />
-        <div className="rounded-[28px] border border-line bg-ink-2 p-6">
+        <div className="rounded-[28px] border border-line bg-page p-6">
           <ul className="flex flex-col gap-2 text-sm">
             {order.lines.map((l) => (
               <li key={l.id} className="flex justify-between gap-4">
                 <span>
-                  <span className="text-cream-dim">{l.qty}×</span> {l.name}
+                  <span className="text-ink-2">{l.qty}×</span> {l.name}
                 </span>
                 <span className="tabular-nums">{formatBDT(l.price * l.qty)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
-            <span className="text-cream-dim">
-              Total · {order.payment.status === "paid" ? `Paid by ${order.payment.method}` : "Cash on delivery"}
-            </span>
-            <span className="font-display text-2xl text-saffron">{formatBDT(order.totals.total)}</span>
+            <span className="text-ink-2">Total · {order.payment.status === "paid" ? `Paid by ${order.payment.method}` : "Cash on delivery"}</span>
+            <span className="puff text-2xl text-tomato">{formatBDT(order.totals.total)}</span>
           </div>
         </div>
-        <p className="text-center text-sm text-cream-dim">
-          Questions? Call <a className="text-cream underline" href={`tel:${site.phone.replace(/\s/g, "")}`}>{site.phone}</a>
+        <p className="text-center text-sm text-ink-2">
+          Questions? Call{" "}
+          <a className="text-ink underline" href={`tel:${site.phone.replace(/\s/g, "")}`}>
+            {site.phone}
+          </a>
         </p>
       </div>
     </div>

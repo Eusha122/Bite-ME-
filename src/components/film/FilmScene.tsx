@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { loadSequence, type Sequence } from "./frameLoader";
+import { drawFrame } from "./draw";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -67,8 +68,6 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       lastH = cv.height;
       const W = cv.width;
       const H = cv.height;
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, W, H);
       let dw: number, dh: number, dx: number, dy: number;
       if (W / H < 1) {
         // phones: frame much wider than the screen, dish centred in the upper half
@@ -77,14 +76,13 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
         dx = (W - dw) / 2;
         dy = H * 0.36 - dh / 2;
       } else {
-        // desktop: fill height, push the dish right so the copy owns the left column
-        dh = H * 1.04;
+        // desktop: dish sits in the right half so the copy owns the left column
+        dh = Math.min(H * 0.86, (W * 0.62) / aspect * 1.6);
         dw = dh * aspect;
-        dx = W * 0.64 - dw / 2;
-        dy = (H - dh) / 2;
+        dx = W * 0.68 - dw / 2;
+        dy = (H - dh) / 2 + H * 0.03;
       }
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, dx, dy, dw, dh);
+      drawFrame(ctx, img, bg, dx, dy, dw, dh);
     };
 
     // per-beat word stagger
@@ -157,7 +155,7 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
                   {b.kicker}
                 </p>
               )}
-              <h2 className="puff text-step-7 md:text-step-8">{b.title}</h2>
+              <h2 className="puff text-step-7">{b.title}</h2>
               {b.body && (
                 <p data-f className="mt-5 max-w-[34ch] text-step-0 font-semibold leading-relaxed text-ink-2 md:text-step-1">
                   {b.body}
@@ -181,7 +179,7 @@ export function Words({ children, className = "" }: { children: string; classNam
   return (
     <span className={`block ${className}`}>
       {children.split(" ").map((w, k) => (
-        <span key={k} className="inline-block overflow-hidden pb-[0.18em] pr-[0.22em] align-top">
+        <span key={k} className="-mb-[0.12em] inline-block overflow-hidden pb-[0.24em] pr-[0.24em] align-top">
           <span data-w className="inline-block will-change-transform">
             {w}
           </span>

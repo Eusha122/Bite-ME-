@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -17,10 +17,10 @@ function inRange(t: number, r: Range) {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-3xl border border-line bg-ink-2 p-5">
-      <div className="text-xs uppercase tracking-[0.2em] text-cream-dim">{label}</div>
-      <div className="mt-3 font-display text-4xl font-light tabular-nums">{value}</div>
-      {sub && <div className="mt-1 text-xs text-cream-dim">{sub}</div>}
+    <div className="rounded-3xl border border-line bg-page p-5">
+      <div className="text-xs uppercase tracking-[0.2em] text-ink-2">{label}</div>
+      <div className="mt-3 puff text-4xl font-light tabular-nums">{value}</div>
+      {sub && <div className="mt-1 text-xs text-ink-2">{sub}</div>}
     </div>
   );
 }
@@ -32,9 +32,9 @@ function BarList({ rows, format }: { rows: { label: string; value: number }[]; f
     <ul className="flex flex-col gap-2.5">
       {rows.map((r) => (
         <li key={r.label} className="group grid grid-cols-[92px_1fr_auto] items-center gap-3 text-sm" title={`${r.label}: ${format(r.value)}`}>
-          <span className="truncate text-cream-dim">{r.label}</span>
-          <span className="relative h-3 rounded-r-[4px] bg-white/[0.04]">
-            <span className="absolute inset-y-0 left-0 rounded-r-[4px] bg-saffron transition-all duration-700 group-hover:brightness-125" style={{ width: `${(r.value / max) * 100}%` }} />
+          <span className="truncate text-ink-2">{r.label}</span>
+          <span className="relative h-3 rounded-r-[4px] bg-paper-2]">
+            <span className="absolute inset-y-0 left-0 rounded-r-[4px] bg-tomato transition-all duration-700" style={{ width: `${(r.value / max) * 100}%` }} />
           </span>
           <span className="w-20 text-right tabular-nums">{format(r.value)}</span>
         </li>
@@ -50,7 +50,7 @@ function HourChart({ counts }: { counts: number[] }) {
   const hours = counts.slice(11, 24); // service hours 11:00–23:00
   return (
     <div className="relative">
-      <div className="flex h-40 items-end gap-[2px] border-b border-white/10">
+      <div className="flex h-40 items-end gap-[2px] border-b border-line">
         {hours.map((c, k) => (
           <div
             key={k}
@@ -60,16 +60,19 @@ function HourChart({ counts }: { counts: number[] }) {
             role="img"
             aria-label={`${k + 11}:00 — ${c} orders`}
           >
-            <div className="w-full rounded-t-[4px] bg-saffron transition-opacity" style={{ height: `${(c / max) * 100}%`, opacity: hover === null || hover === k ? 1 : 0.4, minHeight: c ? 3 : 0 }} />
+            <div
+              className="w-full rounded-t-[4px] bg-tomato transition-opacity"
+              style={{ height: `${(c / max) * 100}%`, opacity: hover === null || hover === k ? 1 : 0.4, minHeight: c ? 3 : 0 }}
+            />
             {hover === k && (
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-ink px-2.5 py-1.5 text-xs">
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs">
                 {k + 11}:00 · <b>{c}</b> orders
               </div>
             )}
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-cream-dim">
+      <div className="mt-2 flex justify-between text-[11px] text-ink-2">
         <span>11am</span>
         <span>3pm</span>
         <span>7pm</span>
@@ -93,7 +96,7 @@ function TableQRs() {
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
       {codes.map((c) => (
-        <figure key={c.n} className="flex flex-col items-center gap-2 rounded-2xl bg-cream p-3 text-ink">
+        <figure key={c.n} className="flex flex-col items-center gap-2 rounded-2xl bg-ink p-3 text-page">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={c.src} alt={`QR code for table ${c.n}`} className="w-full" />
           <figcaption className="text-xs font-bold">Table {c.n}</figcaption>
@@ -151,7 +154,10 @@ export default function Dashboard() {
       aov: list.length ? Math.round(revenue / list.length) : 0,
       modes,
       hours,
-      cuisine: cuisines.filter((c) => c.id !== "drinks" || byCuisine.has("drinks")).map((c) => ({ label: c.name, value: byCuisine.get(c.id) ?? 0 })).sort((a, b) => b.value - a.value),
+      cuisine: cuisines
+        .filter((c) => c.id !== "drinks" || byCuisine.has("drinks"))
+        .map((c) => ({ label: c.name, value: byCuisine.get(c.id) ?? 0 }))
+        .sort((a, b) => b.value - a.value),
       top: [...byDish.values()].sort((a, b) => b.qty - a.qty).slice(0, 6),
     };
   }, [orders, range]);
@@ -172,23 +178,29 @@ export default function Dashboard() {
     <div className="mx-auto min-h-dvh max-w-[1400px] px-4 pb-16 pt-5 md:px-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Logo className="text-3xl" />
-          <span className="rounded-full border border-line px-3 py-1 text-xs uppercase tracking-[0.25em] text-cream-dim">Owner dashboard</span>
+          <Logo className="h-10" />
+          <span className="rounded-full border border-line px-3 py-1 text-xs uppercase tracking-[0.25em] text-ink-2">Owner dashboard</span>
         </div>
         <div className="flex gap-2 text-sm">
-          <Link href="/kitchen" className="rounded-full bg-saffron px-4 py-2 font-bold text-ink">Open kitchen display</Link>
-          <Link href="/" className="rounded-full border border-white/15 px-4 py-2 text-cream-dim hover:text-cream">View site</Link>
+          <Link href="/kitchen" className="rounded-full bg-tomato px-4 py-2 font-bold text-page">
+            Open kitchen display
+          </Link>
+          <Link href="/" className="rounded-full border border-line px-4 py-2 text-ink-2">
+            View site
+          </Link>
         </div>
       </header>
 
       <nav className="no-scrollbar mb-6 flex gap-2 overflow-x-auto border-b border-line pb-3">
-        {([
-          ["overview", "Overview"],
-          ["menu", "Menu availability"],
-          ["reservations", `Reservations${pending ? ` (${pending})` : ""}`],
-          ["qr", "Table QR codes"],
-        ] as const).map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} className={`shrink-0 rounded-full px-4 py-2 text-sm ${tab === id ? "bg-cream font-bold text-ink" : "text-cream-dim hover:text-cream"}`}>
+        {(
+          [
+            ["overview", "Overview"],
+            ["menu", "Menu availability"],
+            ["reservations", `Reservations${pending ? ` (${pending})` : ""}`],
+            ["qr", "Table QR codes"],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} className={`shrink-0 rounded-full px-4 py-2 text-sm ${tab === id ? "bg-ink font-bold text-page" : "text-ink-2"}`}>
             {label}
           </button>
         ))}
@@ -198,7 +210,11 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4">
           <div className="flex gap-2">
             {(["today", "7d", "30d"] as Range[]).map((r) => (
-              <button key={r} onClick={() => setRange(r)} className={`rounded-full border px-4 py-1.5 text-xs ${range === r ? "border-saffron text-saffron" : "border-white/12 text-cream-dim"}`}>
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`rounded-full border px-4 py-1.5 text-xs ${range === r ? "border-tomato text-tomato" : "border-line text-ink-2"}`}
+              >
                 {r === "today" ? "Today" : r === "7d" ? "Last 7 days" : "Last 30 days"}
               </button>
             ))}
@@ -210,27 +226,35 @@ export default function Dashboard() {
             <Tile label="Open reservations" value={String(pending)} sub={`${reservations.length} total`} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-3xl border border-line bg-ink-2 p-6">
-              <h3 className="mb-5 font-display text-xl">Revenue by kitchen</h3>
+            <div className="rounded-3xl border border-line bg-page p-6">
+              <h3 className="mb-5 puff text-xl">Revenue by kitchen</h3>
               <BarList rows={stats.cuisine} format={formatBDT} />
             </div>
-            <div className="rounded-3xl border border-line bg-ink-2 p-6">
-              <h3 className="mb-5 font-display text-xl">Orders by hour</h3>
+            <div className="rounded-3xl border border-line bg-page p-6">
+              <h3 className="mb-5 puff text-xl">Orders by hour</h3>
               <HourChart counts={stats.hours} />
             </div>
           </div>
-          <div className="rounded-3xl border border-line bg-ink-2 p-6">
-            <h3 className="mb-4 font-display text-xl">Best sellers</h3>
+          <div className="rounded-3xl border border-line bg-page p-6">
+            <h3 className="mb-4 puff text-xl">Best sellers</h3>
             {stats.top.length === 0 ? (
-              <p className="text-sm text-cream-dim">No orders in this period yet — place one from the site to see it here.</p>
+              <p className="text-sm text-ink-2">No orders in this period yet — place one from the site to see it here.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wider text-cream-dim">
-                  <tr><th className="pb-2 font-normal">Dish</th><th className="pb-2 text-right font-normal">Sold</th><th className="pb-2 text-right font-normal">Revenue</th></tr>
+                <thead className="text-left text-xs uppercase tracking-wider text-ink-2">
+                  <tr>
+                    <th className="pb-2 font-normal">Dish</th>
+                    <th className="pb-2 text-right font-normal">Sold</th>
+                    <th className="pb-2 text-right font-normal">Revenue</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {stats.top.map((d) => (
-                    <tr key={d.name}><td className="py-2.5">{d.name}</td><td className="py-2.5 text-right tabular-nums">{d.qty}</td><td className="py-2.5 text-right tabular-nums">{formatBDT(d.revenue)}</td></tr>
+                    <tr key={d.name}>
+                      <td className="py-2.5">{d.name}</td>
+                      <td className="py-2.5 text-right tabular-nums">{d.qty}</td>
+                      <td className="py-2.5 text-right tabular-nums">{formatBDT(d.revenue)}</td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -244,14 +268,21 @@ export default function Dashboard() {
           {menu.map((m) => {
             const off = soldOut.includes(m.id);
             return (
-              <label key={m.id} className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-line bg-ink-2 px-4 py-3">
+              <label key={m.id} className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-line bg-page px-4 py-3">
                 <span>
                   <span className="block">{m.name}</span>
-                  <span className="text-xs text-cream-dim">{cuisines.find((c) => c.id === m.cuisine)?.name} · {formatBDT(m.price)}</span>
+                  <span className="text-xs text-ink-2">
+                    {cuisines.find((c) => c.id === m.cuisine)?.name} · {formatBDT(m.price)}
+                  </span>
                 </span>
                 <span className="flex items-center gap-3 text-xs">
-                  <span className={off ? "text-chili" : "text-emerald-300"}>{off ? "Sold out" : "Available"}</span>
-                  <input type="checkbox" checked={!off} onChange={(e) => toggle(m.id, !e.target.checked)} className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/15 transition before:block before:h-5 before:w-5 before:rounded-full before:bg-cream before:transition checked:bg-emerald-500 checked:before:translate-x-4" />
+                  <span className={off ? "text-tomato-deep" : "text-basil"}>{off ? "Sold out" : "Available"}</span>
+                  <input
+                    type="checkbox"
+                    checked={!off}
+                    onChange={(e) => toggle(m.id, !e.target.checked)}
+                    className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-paper-2 transition before:block before:h-5 before:w-5 before:rounded-full before:bg-ink before:transition checked:bg-basil checked:before:translate-x-4"
+                  />
                 </span>
               </label>
             );
@@ -261,23 +292,32 @@ export default function Dashboard() {
 
       {tab === "reservations" && (
         <div className="flex flex-col gap-2">
-          {reservations.length === 0 && <p className="text-cream-dim">No reservations yet.</p>}
+          {reservations.length === 0 && <p className="text-ink-2">No reservations yet.</p>}
           {reservations.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-ink-2 px-5 py-4">
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-page px-5 py-4">
               <div>
-                <div className="font-semibold">{r.name} · {r.guests} {r.guests === 1 ? "guest" : "guests"}</div>
-                <div className="text-sm text-cream-dim">
-                  {r.date} at {r.time} · <a href={`tel:${r.phone}`} className="underline">{r.phone}</a>
+                <div className="font-semibold">
+                  {r.name} · {r.guests} {r.guests === 1 ? "guest" : "guests"}
+                </div>
+                <div className="text-sm text-ink-2">
+                  {r.date} at {r.time} ·{" "}
+                  <a href={`tel:${r.phone}`} className="underline">
+                    {r.phone}
+                  </a>
                   {r.note ? ` · “${r.note}”` : ""}
                 </div>
               </div>
               {r.status === "requested" ? (
                 <div className="flex gap-2">
-                  <button onClick={() => decide(r.id, "confirmed")} className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-ink">Confirm</button>
-                  <button onClick={() => decide(r.id, "declined")} className="rounded-full border border-white/15 px-4 py-2 text-sm text-cream-dim">Decline</button>
+                  <button onClick={() => decide(r.id, "confirmed")} className="rounded-full bg-basil px-4 py-2 text-sm font-bold text-page">
+                    Confirm
+                  </button>
+                  <button onClick={() => decide(r.id, "declined")} className="rounded-full border border-line px-4 py-2 text-sm text-ink-2">
+                    Decline
+                  </button>
                 </div>
               ) : (
-                <span className={`text-sm ${r.status === "confirmed" ? "text-emerald-300" : "text-chili"}`}>{r.status === "confirmed" ? "✓ Confirmed" : "✕ Declined"}</span>
+                <span className={`text-sm ${r.status === "confirmed" ? "text-basil" : "text-tomato-deep"}`}>{r.status === "confirmed" ? "✓ Confirmed" : "✕ Declined"}</span>
               )}
             </div>
           ))}
@@ -287,8 +327,12 @@ export default function Dashboard() {
       {tab === "qr" && (
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <p className="max-w-xl text-sm text-cream-dim">Print these and place one on each table. Guests scan, order and pay from their phone — orders land on the kitchen display tagged with the table number.</p>
-            <button onClick={() => window.print()} className="rounded-full border border-white/15 px-4 py-2 text-sm">Print</button>
+            <p className="max-w-xl text-sm text-ink-2">
+              Print these and place one on each table. Guests scan, order and pay from their phone — orders land on the kitchen display tagged with the table number.
+            </p>
+            <button onClick={() => window.print()} className="rounded-full border border-line px-4 py-2 text-sm">
+              Print
+            </button>
           </div>
           <TableQRs />
         </div>

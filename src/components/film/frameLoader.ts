@@ -43,9 +43,14 @@ function pump() {
 function passOrder(n: number) {
   const seen = new Set<number>();
   const order: number[] = [];
+  const take = (i: number) => {
+    if (seen.has(i)) return;
+    seen.add(i);
+    order.push(i);
+  };
   for (const stride of [16, 8, 4, 2, 1]) {
-    for (let i = 0; i < n; i += stride) if (!seen.has(i)) (seen.add(i), order.push(i));
-    if (!seen.has(n - 1)) (seen.add(n - 1), order.push(n - 1));
+    for (let i = 0; i < n; i += stride) take(i);
+    take(n - 1);
   }
   return order;
 }

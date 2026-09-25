@@ -1,38 +1,33 @@
-import Link from "next/link";
 import { site } from "@/config/site";
+import { WaveEdge } from "./Wave";
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-line pt-16">
-      <div className="mx-auto grid max-w-[1400px] gap-10 px-5 pb-10 md:grid-cols-4 md:px-10">
-        <div className="md:col-span-2">
-          <p className="max-w-sm text-cream-dim">{site.description}</p>
+    <footer>
+      <WaveEdge color="var(--tomato)" />
+      <div className="-mt-px bg-tomato px-5 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-10 text-page md:px-[5vw] md:pt-16">
+        <h2 className="puff puff-paper text-step-7 md:text-step-8">
+          Hungry yet?
+        </h2>
+        <div className="mt-12 grid gap-10 text-step-0 font-bold md:grid-cols-3">
+          <div>
+            <p className="mb-2 text-step--1 font-extrabold uppercase tracking-[0.18em] text-mustard">Find us</p>
+            <p>{site.address}</p>
+          </div>
+          <div>
+            <p className="mb-2 text-step--1 font-extrabold uppercase tracking-[0.18em] text-mustard">Open</p>
+            {site.hours.map((h) => (
+              <p key={h.days}>
+                {h.days} · {h.time}
+              </p>
+            ))}
+          </div>
+          <div>
+            <p className="mb-2 text-step--1 font-extrabold uppercase tracking-[0.18em] text-mustard">Call</p>
+            <a href={`tel:${site.phone.replace(/\s/g, "")}`}>{site.phone}</a>
+          </div>
         </div>
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="mb-1 text-xs uppercase tracking-[0.25em] text-cream-dim">Visit</span>
-          <span>{site.address}</span>
-          <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="hover:text-saffron">{site.phone}</a>
-          {site.hours.map((h) => (
-            <span key={h.days} className="text-cream-dim">
-              {h.days} · {h.time}
-            </span>
-          ))}
-        </div>
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="mb-1 text-xs uppercase tracking-[0.25em] text-cream-dim">Explore</span>
-          <Link href="/menu" className="hover:text-saffron">Order online</Link>
-          <Link href="/#reserve" className="hover:text-saffron">Reserve a table</Link>
-          <a href={`https://wa.me/${site.whatsapp}`} className="hover:text-saffron">WhatsApp us</a>
-          <a href={site.socials.instagram} className="hover:text-saffron">Instagram</a>
-          <a href={site.socials.facebook} className="hover:text-saffron">Facebook</a>
-        </div>
-      </div>
-      <div aria-hidden className="select-none px-2 text-center font-display text-[27vw] font-light leading-[0.75] tracking-[-0.06em] text-cream/[0.06]">
-        Bite<span className="italic">ME</span>
-      </div>
-      <div className="flex flex-col items-center justify-between gap-2 border-t border-line px-5 py-5 text-xs text-cream-dim md:flex-row md:px-10">
-        <span>© {new Date().getFullYear()} {site.name}. All rights reserved.</span>
-        <span>Prices include ingredients sourced fresh daily · VAT {Math.round(site.delivery.vatRate * 100)}% applied at checkout</span>
+        <p className="mt-16 text-step--1 font-bold text-page/70">© {new Date().getFullYear()} {site.name}. Prices include fresh ingredients · VAT added at checkout.</p>
       </div>
     </footer>
   );
