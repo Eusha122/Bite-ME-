@@ -38,14 +38,11 @@ function stateAt(p: number, meta: FilmMeta) {
   const k = Math.min(n - 1, Math.floor(t / (HOLD + TURN)));
   const local = t - k * (HOLD + TURN);
   const rest = (i: number) => (i === 0 ? 0 : i * per - 1);
-  if (local < HOLD || k === n - 1) {
-    // panel eases in at the start of a hold and out at its end (the last dish stays)
-    const h = local / HOLD;
-    const show = k === n - 1 ? smooth(h / 0.15) : smooth(h / 0.15) * (1 - smooth((h - 0.85) / 0.15));
-    return { frame: rest(k), dish: k, show, turn: 0 };
-  }
+  if (local < HOLD || k === n - 1) return { frame: rest(k), dish: k, show: 1 };
+  // mid-turn the copy hands over: the leaving dish fades out, the arriving one fades in
   const u = (local - HOLD) / TURN;
-  return { frame: k * per + u * (per - 1), dish: k, show: 0, turn: u };
+  const arriving = u >= 0.5;
+  return { frame: k * per + u * (per - 1), dish: arriving ? k + 1 : k, show: smooth(Math.abs(u - 0.5) * 2 * 1.4) };
 }
 
 function DishCopy({ index }: { index: number }) {
@@ -90,6 +87,7 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     let seq: ReturnType<typeof loadSequence> | null = null;
     let progress = 0;
     let lastKey = "";
+    let lastImg: HTMLImageElement | null = null;
     let lastDish = -1;
 
     const narrow = () => cv.clientWidth / cv.clientHeight < 1;
@@ -105,21 +103,21 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
       const s = stateAt(progress, meta);
       const idx = Math.round(clamp(s.frame, 0, meta.frames - 1));
       const img = seq.nearest(idx);
-      // a gentle push-in while a dish is being presented
-      const push = 1 + s.show * 0.035;
-      const key = `${idx}|${push.toFixed(4)}|${cv.width}x${cv.height}|${img ? 1 : 0}`;
-      if (img && key !== lastKey) {
-        lastKey = key;
+      // redraw when the frame changes, the canvas resizes, or a sharper frame for this index arrives
+      const size = `${cv.width}x${cv.height}`;
+      if (img && (img !== lastImg || size !== lastKey)) {
+        lastImg = img;
+        lastKey = size;
         const W = cv.width;
         const H = cv.height;
         let dw: number, dh: number, cx: number, cy: number;
         if (narrow()) {
-          dw = W * 1.7 * push;
+          dw = W * 1.7;
           dh = dw / meta.aspect;
           cx = W * 0.5;
           cy = H * 0.3;
         } else {
-          dh = H * 1.02 * push;
+          dh = H * 1.02;
           dw = dh * meta.aspect;
           cx = W * 0.64;
           cy = H * 0.52;

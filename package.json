@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "film:table": "node scripts/extract-frames.mjs table 48 assets-src/video/table-turn-01.mp4 assets-src/video/table-turn-02.mp4 assets-src/video/table-turn-03.mp4 assets-src/video/table-turn-04.mp4 assets-src/video/table-turn-05.mp4 assets-src/video/table-turn-06.mp4 assets-src/video/table-turn-07.mp4 assets-src/video/table-turn-08.mp4 assets-src/video/table-turn-09.mp4"
+    "film:table": "cross-env FRAME_Q=60 FRAME_QM=56 node scripts/extract-frames.mjs table 30 assets-src/video/table-turn-01.mp4 assets-src/video/table-turn-02.mp4 assets-src/video/table-turn-03.mp4 assets-src/video/table-turn-04.mp4 assets-src/video/table-turn-05.mp4 assets-src/video/table-turn-06.mp4 assets-src/video/table-turn-07.mp4 assets-src/video/table-turn-08.mp4 assets-src/video/table-turn-09.mp4"
   },
   "dependencies": {
     "gsap": "^3.15.0",
@@ -25,6 +25,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "ffmpeg-static": "^5.3.0",

@@ -14,17 +14,31 @@ type DB = { orders: Order[]; reservations: Reservation[]; soldOut: string[]; seq
 const FILE = path.join(process.cwd(), ".data", "db.json");
 const EMPTY: DB = { orders: [], reservations: [], soldOut: [], seq: 1000 };
 
-let cache: DB | null = null;
-let queue: Promise<unknown> = Promise.resolve();
+/*
+ * Next bundles every route separately, so module-level variables are NOT shared
+ * between e.g. POST /api/orders and GET /api/orders/[id]. The cache and write queue
+ * live on globalThis (one per server process), and the file's mtime is checked on
+ * every read so a stale copy can never be served.
+ */
+type Store = { cache: DB | null; mtime: number; queue: Promise<unknown> };
+const g = globalThis as typeof globalThis & { __bitemeStore?: Store };
+const store: Store = (g.__bitemeStore ??= { cache: null, mtime: 0, queue: Promise.resolve() });
 
 async function load(): Promise<DB> {
-  if (cache) return cache;
+  let mtime = 0;
   try {
-    cache = { ...EMPTY, ...JSON.parse(await fs.readFile(FILE, "utf8")) } as DB;
+    mtime = (await fs.stat(FILE)).mtimeMs;
   } catch {
-    cache = structuredClone(EMPTY);
+    // no file yet
   }
-  return cache;
+  if (store.cache && mtime === store.mtime) return store.cache;
+  try {
+    store.cache = { ...EMPTY, ...JSON.parse(await fs.readFile(FILE, "utf8")) } as DB;
+  } catch {
+    store.cache = structuredClone(EMPTY);
+  }
+  store.mtime = mtime;
+  return store.cache;
 }
 
 async function persist(db: DB) {
@@ -32,17 +46,18 @@ async function persist(db: DB) {
   const tmp = FILE + ".tmp";
   await fs.writeFile(tmp, JSON.stringify(db, null, 2));
   await fs.rename(tmp, FILE);
+  store.mtime = (await fs.stat(FILE)).mtimeMs;
 }
 
 /** Serialise all writes so concurrent requests can't clobber each other. */
 function mutate<T>(fn: (db: DB) => T | Promise<T>): Promise<T> {
-  const run = queue.then(async () => {
+  const run = store.queue.then(async () => {
     const db = await load();
     const out = await fn(db);
     await persist(db);
     return out;
   });
-  queue = run.catch(() => undefined);
+  store.queue = run.catch(() => undefined);
   return run;
 }
 
