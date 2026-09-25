@@ -1,3 +1,4 @@
+import { DATA_DIR } from "@/lib/db";
 import { NextResponse, type NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -5,7 +6,7 @@ import crypto from "node:crypto";
 import sharp from "sharp";
 import { isStaff } from "@/lib/staff";
 
-const UPLOAD_DIR = path.join(process.cwd(), ".data", "uploads");
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const MAX_BYTES = 8 * 1024 * 1024;
 
 /**

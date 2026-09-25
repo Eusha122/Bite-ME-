@@ -1,8 +1,9 @@
+import { DATA_DIR } from "@/lib/db";
 import { NextResponse, type NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const UPLOAD_DIR = path.join(process.cwd(), ".data", "uploads");
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const NAME = /^[a-f0-9-]{36}\.webp$/;
 
 /** Public: serves uploaded dish photos. Files are content-named, so they cache forever. */

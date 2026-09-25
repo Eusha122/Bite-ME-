@@ -1,5 +1,6 @@
 import "server-only";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { Order, Reservation } from "./types";
@@ -23,7 +24,16 @@ type DB = {
   soldOut?: string[];
 };
 
-const FILE = path.join(process.cwd(), ".data", "db.json");
+/*
+ * Serverless hosts (Vercel, Netlify, AWS Lambda) have a read-only project folder: only the
+ * temp directory is writable. Writing to ./.data there fails, which made every order fail.
+ * Set DATA_DIR to a persistent volume on a VPS; otherwise we use ./.data locally and the
+ * temp directory on serverless. (Temp storage is per-instance and wiped on cold starts —
+ * fine for a demo, but use a real database for a live restaurant.)
+ */
+const SERVERLESS = !!(process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+export const DATA_DIR = process.env.DATA_DIR || (SERVERLESS ? path.join(os.tmpdir(), "biteme-data") : path.join(process.cwd(), ".data"));
+const FILE = path.join(DATA_DIR, "db.json");
 
 /*
  * Next bundles every route separately, so module-level variables are NOT shared
