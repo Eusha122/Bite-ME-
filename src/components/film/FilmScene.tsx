@@ -43,7 +43,16 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
     const cv = canvas.current!;
     const ctx = cv.getContext("2d", { alpha: false })!;
     const narrow = window.matchMedia("(max-width: 767px)").matches;
-    const seq: Sequence = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames);
+    let seq: Sequence | null = null;
+    const start = () => {
+      if (seq) return;
+      seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames);
+      seq.onFirst.then(() => {
+        lastDrawn = null;
+        draw();
+        onReady?.();
+      });
+    };
     let progress = 0;
     let lastDrawn: HTMLImageElement | null = null;
     let lastW = 0;
@@ -59,6 +68,7 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
     };
 
     const draw = () => {
+      if (!seq) return;
       const idx = Math.round(progress * (frames - 1));
       const img = seq.nearest(idx);
       if (!img) return;
@@ -114,10 +124,9 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
     };
 
     resize();
-    seq.onFirst.then(() => {
-      draw();
-      onReady?.();
-    });
+    // the hero loads straight away; later scenes start downloading ~2 screens before they arrive
+    const warm = ScrollTrigger.create({ trigger: section.current, start: "top 300%", once: true, onEnter: start });
+    if (onReady) start();
 
     const st = ScrollTrigger.create({
       trigger: section.current,
@@ -138,6 +147,7 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
 
     return () => {
       st.kill();
+      warm.kill();
       gsap.ticker.remove(tick);
       ro.disconnect();
     };

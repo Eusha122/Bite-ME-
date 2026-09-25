@@ -7,7 +7,7 @@ export default async function Page() {
     kacchi: await film("kacchi"),
     pizza: await film("pizza"),
     ramen: await film("ramen"),
-    book: await film("book"),
+    table: await film("table"),
   };
   return <Home films={films} />;
 }

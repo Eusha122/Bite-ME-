@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function Page({ searchParams }: PageProps<"/menu">) {
   const sp = await searchParams;
   const table = typeof sp.table === "string" ? sp.table.slice(0, 10) : undefined;
-  const book = await film("book");
-  if (!book) redirect("/");
-  return <MenuPage meta={book} table={table} />;
+  const spin = await film("table");
+  if (!spin) redirect("/");
+  return <MenuPage meta={spin} table={table} />;
 }

@@ -32,7 +32,6 @@
   --color-line: var(--line);
   --font-puff: var(--font-bagel);
   --font-sans: var(--font-manrope);
-  --font-bangla: var(--font-hind);
 
   /* Major-third type scale (1.25), fluid at the display end */
   --text-step--1: 0.8rem;

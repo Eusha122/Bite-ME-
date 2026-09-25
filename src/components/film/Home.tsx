@@ -3,14 +3,14 @@
 import { useCallback, useState } from "react";
 import type { FilmInfo } from "@/lib/films";
 import FilmScene, { Words, type Beat } from "./FilmScene";
-import MenuBook from "./MenuBook";
+import MenuTable from "./MenuTable";
 import SmoothScroll from "./SmoothScroll";
 import Intro from "./Intro";
 import Nav from "../Nav";
 import WaveBand from "../Wave";
 import Footer from "../Footer";
 
-export type Films = Record<"hero" | "kacchi" | "pizza" | "ramen" | "book", FilmInfo | null>;
+export type Films = Record<"hero" | "kacchi" | "pizza" | "ramen" | "table", FilmInfo | null>;
 
 const title = (a: string, b: string) => (
   <>
@@ -94,7 +94,7 @@ export default function Home({ films }: { films: Films }) {
         {films.kacchi && <FilmScene id="kacchi" film="kacchi" beats={KACCHI} {...films.kacchi} />}
         {films.pizza && <FilmScene id="pizza" film="pizza" beats={PIZZA} {...films.pizza} />}
         {films.ramen && <FilmScene id="ramen" film="ramen" beats={RAMEN} {...films.ramen} />}
-        {films.book && <MenuBook meta={films.book} />}
+        {films.table && <MenuTable meta={films.table} />}
       </main>
       <Footer />
     </>

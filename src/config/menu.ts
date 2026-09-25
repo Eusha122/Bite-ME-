@@ -1,6 +1,6 @@
 export type CuisineId = "deshi" | "japanese" | "indian" | "italian" | "chinese" | "burgers" | "drinks";
 
-export type Cuisine = { id: CuisineId; name: string; bn: string };
+export type Cuisine = { id: CuisineId; name: string };
 
 export type MenuItem = {
   id: string;
@@ -16,13 +16,13 @@ export type MenuItem = {
 };
 
 export const cuisines: Cuisine[] = [
-  { id: "deshi", name: "Deshi", bn: "দেশি" },
-  { id: "japanese", name: "Japanese", bn: "জাপানি" },
-  { id: "indian", name: "Indian", bn: "ভারতীয়" },
-  { id: "italian", name: "Italian", bn: "ইতালিয়ান" },
-  { id: "chinese", name: "Chinese", bn: "চাইনিজ" },
-  { id: "burgers", name: "Burgers", bn: "বার্গার" },
-  { id: "drinks", name: "Drinks", bn: "পানীয়" },
+  { id: "deshi", name: "Deshi" },
+  { id: "japanese", name: "Japanese" },
+  { id: "indian", name: "Indian" },
+  { id: "italian", name: "Italian" },
+  { id: "chinese", name: "Chinese" },
+  { id: "burgers", name: "Burgers" },
+  { id: "drinks", name: "Drinks" },
 ];
 
 /** Ten dishes — each gets its own page in the menu book. */
@@ -122,7 +122,7 @@ export const menu: MenuItem[] = [
   },
 ];
 
-export const formatBDT = (n: number) => `৳${n.toLocaleString("en-IN")}`;
+export const formatBDT = (n: number) => `Tk ${n.toLocaleString("en-IN")}`;
 
 export const getItem = (id: string) => menu.find((m) => m.id === id);
 

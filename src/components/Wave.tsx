@@ -48,7 +48,7 @@ export default function WaveBand({ bg = "var(--paper)" }: { bg?: string }) {
       {names.map((c) => (
         <span key={c.id} className="flex items-center gap-10">
           <span className="puff puff-paper text-step-6 md:text-step-7">{c.name}</span>
-          <span className="font-bangla text-step-3 font-bold text-mustard">{c.bn}</span>
+          <span className="puff puff-mustard text-step-5">✱</span>
         </span>
       ))}
     </div>

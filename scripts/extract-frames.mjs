@@ -1,7 +1,7 @@
 // Turn one or more film clips into a single scroll-scrubbable image sequence.
 // Usage: node scripts/extract-frames.mjs <name> <framesPerClip> <clip1.mp4> [clip2.mp4 ...]
-//   → public/film/<name>/d/000.webp  (desktop, 1600px wide)
-//   → public/film/<name>/m/000.webp  (phones, 960px wide)
+//   → public/film/<name>/d/000.webp  (desktop, 1440px wide)
+//   → public/film/<name>/m/000.webp  (phones, 900px wide)
 //   → public/film/<name>/meta.json   { frames, perClip, clips, aspect, bg }
 // Clips are concatenated in order, so chained clips (end frame = next start frame) play as one film.
 import { spawnSync } from "node:child_process";
@@ -30,7 +30,7 @@ for (const [c, clip] of clips.entries()) {
   const dir = path.join(tmp, String(c));
   await fs.mkdir(dir);
   // evenly sample PER frames across the clip, lanczos-scaled, lossless intermediates
-  const r = spawnSync(ffmpeg, ["-y", "-i", clip, "-vf", `fps=${(PER / duration).toFixed(6)},scale=1600:-2:flags=lanczos`, "-frames:v", String(PER), path.join(dir, "%03d.png")], { encoding: "utf8" });
+  const r = spawnSync(ffmpeg, ["-y", "-i", clip, "-vf", `fps=${(PER / duration).toFixed(6)},scale=1440:-2:flags=lanczos`, "-frames:v", String(PER), path.join(dir, "%03d.png")], { encoding: "utf8" });
   if (r.status !== 0) throw new Error(r.stderr.slice(-800));
   const files = (await fs.readdir(dir)).filter((f) => f.endsWith(".png")).sort();
   pngs.push(...files.map((f) => path.join(dir, f)));
@@ -45,8 +45,8 @@ let bytesM = 0;
 let aspect = 16 / 9;
 for (const [i, src] of pngs.entries()) {
   const id = String(i).padStart(3, "0");
-  const d = await sharp(src).webp({ quality: 74, effort: 5 }).toFile(path.join(out, "d", `${id}.webp`));
-  const m = await sharp(src).resize(960).webp({ quality: 70, effort: 5 }).toFile(path.join(out, "m", `${id}.webp`));
+  const d = await sharp(src).webp({ quality: 70, effort: 6 }).toFile(path.join(out, "d", `${id}.webp`));
+  const m = await sharp(src).resize(900).webp({ quality: 66, effort: 6 }).toFile(path.join(out, "m", `${id}.webp`));
   bytesD += d.size;
   bytesM += m.size;
   aspect = d.width / d.height;
