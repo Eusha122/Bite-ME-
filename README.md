@@ -76,3 +76,21 @@ scripts/               extract-frames.mjs, fetch-assets.mjs
 ```
 
 Live payments: wallet/card orders are marked paid in demo mode. Wire SSLCommerz (covers bKash, Nagad and cards) at the order-creation step before going live.
+
+## Supabase (orders, menu, dish photos)
+
+Set `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (server-only, see `.env.example`) and the site stores everything in Supabase; leave them empty and it uses local files in `.data/`.
+
+1. Create a Supabase project.
+2. In **SQL Editor** run once:
+   ```sql
+   create table if not exists biteme_store (
+     id text primary key,
+     version int not null default 0,
+     data jsonb not null
+   );
+   alter table biteme_store enable row level security;
+   ```
+3. Add the two env vars locally (`.env.local`) and on your host (e.g. Vercel), then redeploy.
+
+The whole database (orders, reservations, menu, tags) is one JSON document with optimistic locking; dish photos go to a private `dish-images` Storage bucket (created automatically) and are served through `/api/uploads/…`. For a high-traffic restaurant, move to proper tables — only `src/lib/db.ts` needs to change.

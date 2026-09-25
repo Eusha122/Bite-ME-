@@ -5,6 +5,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { Order, Reservation } from "./types";
 import { seedDishes, seedTags, slugify, type Dish } from "@/config/menu";
+import { readRow, writeRow, supabaseEnabled } from "./supabase";
 import { cleanTag, MAX_TAGS_PER_DISH, type DishInput } from "./dishInput";
 
 /**
@@ -41,9 +42,9 @@ const FILE = path.join(DATA_DIR, "db.json");
  * live on globalThis (one per server process), and the file's mtime is checked on
  * every read so a stale copy can never be served.
  */
-type Store = { cache: DB | null; mtime: number; queue: Promise<unknown> };
+type Store = { cache: DB | null; mtime: number; queue: Promise<unknown>; version: number | null; at: number };
 const g = globalThis as typeof globalThis & { __bitemeStore?: Store };
-const store: Store = (g.__bitemeStore ??= { cache: null, mtime: 0, queue: Promise.resolve() });
+const store: Store = (g.__bitemeStore ??= { cache: null, mtime: 0, queue: Promise.resolve(), version: null, at: 0 });
 
 /** Fill in anything an older database file doesn't have yet. */
 function upgrade(raw: Partial<DB>): DB {
@@ -66,7 +67,24 @@ function upgrade(raw: Partial<DB>): DB {
   return db;
 }
 
+/*
+ * With SUPABASE_URL + SUPABASE_SERVICE_KEY set, the whole database is one JSON document in a Supabase
+ * row (biteme_store). Writes are optimistic-locked on a version number, so two server instances can't
+ * overwrite each other: the loser reloads and re-applies its change. Reads are cached for a moment.
+ */
+const REMOTE_TTL = 1500;
+
+async function loadRemote(fresh = false): Promise<DB> {
+  if (!fresh && store.cache && store.cache.dishes && Date.now() - store.at < REMOTE_TTL) return store.cache;
+  const row = await readRow();
+  store.cache = upgrade(row ? (row.data as Partial<DB>) : {});
+  store.version = row ? row.version : null;
+  store.at = Date.now();
+  return store.cache;
+}
+
 async function load(): Promise<DB> {
+  if (supabaseEnabled) return loadRemote();
   let mtime = 0;
   try {
     mtime = (await fs.stat(FILE)).mtimeMs;
@@ -95,6 +113,17 @@ async function persist(db: DB) {
 /** Serialise all writes so concurrent requests can't clobber each other. */
 function mutate<T>(fn: (db: DB) => T | Promise<T>): Promise<T> {
   const run = store.queue.then(async () => {
+    if (supabaseEnabled) {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const db = await loadRemote(true);
+        const out = await fn(db);
+        if (await writeRow(store.version, db)) {
+          store.at = 0; // next read re-fetches the new version
+          return out;
+        }
+      }
+      throw new Error("Could not save — too many simultaneous changes. Please try again.");
+    }
     const db = await load();
     const out = await fn(db);
     await persist(db);
