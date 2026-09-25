@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "film:table": "cross-env FRAME_Q=60 FRAME_QM=56 node scripts/extract-frames.mjs table 30 assets-src/video/table-turn-01.mp4 assets-src/video/table-turn-02.mp4 assets-src/video/table-turn-03.mp4 assets-src/video/table-turn-04.mp4 assets-src/video/table-turn-05.mp4 assets-src/video/table-turn-06.mp4 assets-src/video/table-turn-07.mp4 assets-src/video/table-turn-08.mp4 assets-src/video/table-turn-09.mp4"
+    "film:table": "cross-env FRAME_Q=60 FRAME_QM=63 MOBILE_CROP=0.66 node scripts/extract-frames.mjs table 30 assets-src/video/table-turn-01.mp4 assets-src/video/table-turn-02.mp4 assets-src/video/table-turn-03.mp4 assets-src/video/table-turn-04.mp4 assets-src/video/table-turn-05.mp4 assets-src/video/table-turn-06.mp4 assets-src/video/table-turn-07.mp4 assets-src/video/table-turn-08.mp4 assets-src/video/table-turn-09.mp4"
   },
   "dependencies": {
     "gsap": "^3.15.0",

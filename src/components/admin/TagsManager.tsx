@@ -12,21 +12,28 @@ const field = "h-11 rounded-full border-2 border-line bg-page px-4 font-semibold
 function DishChecklist({ tag }: { tag: string }) {
   const { dishes, tagOperation } = useAdmin();
   const [q, setQ] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const carries = (d: Dish) => d.tags.some((t) => t.toLowerCase() === tag.toLowerCase());
+  // ticks show instantly; an entry is dropped once the server has answered (or failed, which reverts it)
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const saved = (d: Dish) => d.tags.some((t) => t.toLowerCase() === tag.toLowerCase());
+  const carries = (d: Dish) => pending[d.id] ?? saved(d);
   const needle = q.trim().toLowerCase();
   const list = dishes.filter((d) => !needle || [d.name, cuisineName(d.cuisine)].some((f) => f.toLowerCase().includes(needle)));
 
   const toggle = async (d: Dish) => {
-    setBusy(true);
     setError("");
+    const want = !carries(d);
     const ids = new Set(dishes.filter(carries).map((x) => x.id));
-    if (ids.has(d.id)) ids.delete(d.id);
-    else ids.add(d.id);
+    if (want) ids.add(d.id);
+    else ids.delete(d.id);
+    setPending((p) => ({ ...p, [d.id]: want }));
     const err = await tagOperation({ action: "assign", name: tag, dishIds: [...ids] });
     if (err) setError(err);
-    setBusy(false);
+    setPending((p) => {
+      const next = { ...p };
+      delete next[d.id];
+      return next;
+    });
   };
 
   return (
@@ -40,7 +47,7 @@ function DishChecklist({ tag }: { tag: string }) {
         {list.map((d) => (
           <li key={d.id}>
             <label className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 ${carries(d) ? "bg-page" : ""}`}>
-              <input type="checkbox" checked={carries(d)} disabled={busy} onChange={() => toggle(d)} className="h-5 w-5 shrink-0 accent-[var(--tomato)]" />
+              <input type="checkbox" checked={carries(d)} onChange={() => toggle(d)} className="h-5 w-5 shrink-0 accent-[var(--tomato)]" />
               <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-paper-2">
                 <DishImage dish={d} className={`h-full w-full ${d.fit === "contain" ? "p-0.5" : "!rounded-none"}`} />
               </span>

@@ -123,7 +123,7 @@ export default function MenuCatalog({ table }: { table?: string }) {
       </header>
 
       {/* search + tags stay on screen while you scroll, sliding down with the nav bar when it returns */}
-      <div className="sticky top-[var(--nav-h,0px)] z-30 -mx-5 border-y border-line bg-paper px-5 py-3 transition-[top] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] md:-mx-[5vw] md:px-[5vw]">
+      <div className="sticky top-[var(--nav-h,0px)] z-30 -mx-5 border-y border-line bg-paper px-5 py-3 transition-[top] duration-[650ms] ease-[cubic-bezier(.45,0,.2,1)] md:-mx-[5vw] md:px-[5vw]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
           <label className="relative block lg:w-[380px] lg:shrink-0">
             <span className="sr-only">Search the menu</span>

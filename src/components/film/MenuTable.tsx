@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { seedDishes, TABLE_DISH_IDS, formatBDT, cuisineName } from "@/config/menu";
-import { useCart, flyToCart } from "@/lib/cart";
+import { useCart } from "@/lib/cart";
 import { useCatalog } from "../CatalogProvider";
 import { loadSequence, type Sequence } from "./frameLoader";
 import { drawFilm, sizeCanvas } from "./draw";
@@ -56,7 +57,7 @@ function DishCopy({ index }: { index: number }) {
   const item = live ?? seedDishes.find((d) => d.id === id);
   const orderable = !!live && live.available;
   const add = useCart((s) => s.add);
-  const [added, setAdded] = useState(false);
+  const router = useRouter();
   if (!item) return null;
   return (
     <div>
@@ -70,14 +71,14 @@ function DishCopy({ index }: { index: number }) {
         <span className="puff puff-ink text-step-5">{formatBDT(item.price)}</span>
         <button
           disabled={!orderable}
-          onClick={(e) => {
+          // "Order now" = this dish goes in the cart and the guest lands on checkout
+          onClick={() => {
             add(item.id);
-            flyToCart(item.image, { x: e.clientX, y: e.clientY });
-            setAdded(true);
+            router.push("/checkout");
           }}
           className="h-14 rounded-full bg-tomato px-8 text-step-1 font-extrabold text-page shadow-[0_5px_0_var(--tomato-deep)] active:translate-y-[3px] active:shadow-[0_2px_0_var(--tomato-deep)] disabled:bg-paper-2 disabled:text-ink-2 disabled:shadow-none"
         >
-          {!orderable ? "Sold out today" : added ? "Added ✓" : "Order now"}
+          {orderable ? "Order now" : "Sold out today"}
         </button>
       </div>
       <Link href="/menu" className="mt-5 inline-block text-step-0 font-extrabold text-ink underline decoration-2 underline-offset-4">

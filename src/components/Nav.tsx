@@ -139,7 +139,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <div
       id="site-menu"
-      className={`fixed inset-0 z-30 flex flex-col bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-28 transition-[opacity,transform] duration-300 md:hidden ${open ? "opacity-100" : "pointer-events-none -translate-y-4 opacity-0"}`}
+      className={`fixed inset-0 z-30 flex flex-col bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-28 transition-[opacity,translate] duration-300 md:hidden ${open ? "opacity-100" : "pointer-events-none -translate-y-4 opacity-0"}`}
       aria-hidden={!open}
     >
       <nav aria-label="Site" className="flex flex-col gap-2">
@@ -197,7 +197,8 @@ export default function Nav() {
     <>
       <header
         ref={bar}
-        className={`fixed inset-x-0 top-0 z-40 transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${hidden ? "-translate-y-full" : "translate-y-0"} ${
+        // Tailwind v4 moves things with the `translate` property, so that is what must be transitioned
+        className={`fixed inset-x-0 top-0 z-40 transition-[translate,background-color,box-shadow] duration-[650ms] ease-[cubic-bezier(.45,0,.2,1)] ${hidden ? "-translate-y-full" : "translate-y-0"} ${
           atTop || menuOpen ? "bg-transparent" : "bg-paper shadow-[0_1px_0_var(--line)]"
         }`}
       >

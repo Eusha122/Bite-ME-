@@ -33,15 +33,9 @@ export default function Footer() {
             <a href={`tel:${site.phone.replace(/\s/g, "")}`}>{site.phone}</a>
           </div>
         </div>
-        <div className="mt-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-step--1 font-bold text-page/70">
-          <p>
-            © {new Date().getFullYear()} {site.name}. Prices include fresh ingredients · VAT added at checkout.
-          </p>
-          {/* the way into the admin panel: /admin asks for the staff PIN */}
-          <Link href="/admin" className="text-page underline decoration-2 underline-offset-4">
-            Staff login
-          </Link>
-        </div>
+        <p className="mt-16 text-step--1 font-bold text-page/70">
+          © {new Date().getFullYear()} {site.name}. Prices include fresh ingredients · VAT added at checkout.
+        </p>
       </div>
     </footer>
   );
