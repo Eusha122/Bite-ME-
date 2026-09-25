@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
+import { useCart } from "@/lib/cart";
 import { useCatalog } from "../CatalogProvider";
 import DishImage from "../DishImage";
 import { flowFor, statusLabel, type Order, type OrderStatus } from "@/lib/types";
@@ -48,6 +49,11 @@ function StageArt({ status, lines }: { status: OrderStatus; lines: PublicOrder["
 }
 
 export default function OrderTracker({ id }: { id: string }) {
+  const clearCart = useCart((s) => s.clear);
+  // arriving straight from checkout: the order is safe on the server, so the tray can be emptied now
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") clearCart();
+  }, [clearCart]);
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [missing, setMissing] = useState(false);
 

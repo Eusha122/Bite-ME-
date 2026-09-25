@@ -30,7 +30,6 @@ const PAYMENTS: { id: PaymentMethod; label: string; sub: string }[] = [
 export default function Checkout() {
   const router = useRouter();
   const lines = useCart((s) => s.lines);
-  const clear = useCart((s) => s.clear);
   const { dish } = useCatalog();
   const user = useAccount((s) => s.user);
   const addOrder = useAccount((s) => s.addOrder);
@@ -42,12 +41,14 @@ export default function Checkout() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(false);
+  // set once the order is saved: the page stays put (cart intact) until the tracker takes over
+  const [placed, setPlaced] = useState(false);
 
   if (!mounted) return null;
 
   const t = computeTotals(lines, dish, mode);
 
-  if (lines.length === 0) {
+  if (lines.length === 0 && !placed) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <h1 className="puff text-5xl font-light">
@@ -82,8 +83,8 @@ export default function Checkout() {
       setPaying(false);
       return;
     }
-    clear();
     if (user) addOrder(json.id); // logged-in guests find this order again under "My orders"
+    setPlaced(true); // the cart is emptied by the tracker page, so no "empty tray" flash in between
     router.push(`/order/${json.id}?new=1`);
   };
 
@@ -236,12 +237,12 @@ export default function Checkout() {
         </button>
       </aside>
 
-      {paying && (
+      {(paying || placed) && (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-ink/60">
           <div className="flex w-[min(360px,90vw)] flex-col items-center gap-5 rounded-[28px] border border-line bg-page p-8 text-center">
             <span className="h-12 w-12 animate-spin rounded-full border-2 border-line border-t-tomato" />
-            <p className="puff text-2xl">Confirming with {PAYMENTS.find((p) => p.id === payment)?.label}…</p>
-            <p className="text-sm text-ink-2">Demo payment — this step would open the secure gateway.</p>
+            <p className="puff text-2xl">{placed ? "Order placed!" : `Confirming with ${PAYMENTS.find((p) => p.id === payment)?.label}…`}</p>
+            <p className="text-sm text-ink-2">{placed ? "Opening your live tracker…" : "Demo payment — this step would open the secure gateway."}</p>
           </div>
         </div>
       )}
