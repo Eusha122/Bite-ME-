@@ -49,7 +49,7 @@ export default function AuthForm({ onDone, autoFocus = false }: { onDone?: () =>
         {tab === "create" && (
           <label className="flex flex-col gap-1.5 text-sm font-extrabold">
             Your name
-            <input name="name" autoComplete="name" autoFocus={autoFocus} placeholder="e.g. Sadia Karim" className={field} />
+            <input name="name" autoComplete="name" autoFocus={autoFocus} placeholder="e.g. Eusha Ibna Akbor" className={field} />
           </label>
         )}
         <label className="flex flex-col gap-1.5 text-sm font-extrabold">

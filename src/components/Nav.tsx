@@ -201,8 +201,8 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <AccountMenu />
             <CartButton className="h-11 w-11 md:h-12 md:w-12" />
+            <AccountMenu />
             <button
               onClick={() => setMenuOpen((o) => !o)}
               aria-expanded={menuOpen}

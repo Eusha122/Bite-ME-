@@ -92,8 +92,8 @@ export default function Home({ films }: { films: Films }) {
         {films.hero && <FilmScene id="story" film="hero" beats={HERO} length={340} onReady={onReady} {...films.hero} />}
         <WaveBand bg={films.hero?.bg} />
         {films.kacchi && <FilmScene id="kacchi" film="kacchi" side="right" beats={KACCHI} {...films.kacchi} />}
-        {films.pizza && <FilmScene id="pizza" film="pizza" beats={PIZZA} {...films.pizza} />}
-        {films.ramen && <FilmScene id="ramen" film="ramen" side="right" beats={RAMEN} {...films.ramen} />}
+        {films.pizza && <FilmScene id="pizza" film="pizza" side="right" beats={PIZZA} {...films.pizza} />}
+        {films.ramen && <FilmScene id="ramen" film="ramen" side="left" beats={RAMEN} {...films.ramen} />}
         {films.table && <MenuTable meta={films.table} />}
       </main>
       <Footer />

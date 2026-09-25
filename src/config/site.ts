@@ -9,8 +9,8 @@ export const site = {
     "A Dhaka restaurant that travels — Deshi, Japanese, Indian, Italian, Chinese and American burgers under one roof. Order online, dine in, or book a table.",
   city: "Dhaka",
   address: "House 42, Road 11, Banani, Dhaka 1213",
-  phone: "+880 1700-000000",
-  whatsapp: "8801700000000",
+  phone: "+880 1918-331878",
+  whatsapp: "8801918331878",
   email: "hello@biteme.bd",
   deliveryAreas: ["Banani", "Gulshan 1 & 2", "Baridhara", "Niketan", "Mohakhali DOHS"],
   /** time slots offered on the reservation page */
