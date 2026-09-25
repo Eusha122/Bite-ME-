@@ -86,6 +86,21 @@ html.lenis body {
   100% { transform: translate(0, 0); }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(-1.5deg); }
+}
+
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes flame {
+  0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.9; }
+  50% { transform: scaleY(1.25) translateY(-2px); opacity: 1; }
+}
+
 .text-outline {
   -webkit-text-stroke: 1px currentColor;
   color: transparent;
