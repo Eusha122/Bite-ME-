@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useCart, computeTotals } from "@/lib/cart";
+import { useHydrated } from "@/lib/useHydrated";
 import { dishImage } from "@/lib/dishImage";
 
 export function Logo({ className = "" }: { className?: string }) {
@@ -18,15 +18,7 @@ export function CartTray() {
   const lines = useCart((s) => s.lines);
   const pulse = useCart((s) => s.pulse);
   const setOpen = useCart((s) => s.setOpen);
-  const [mounted, setMounted] = useState(false);
-  const [bump, setBump] = useState(false);
-  useEffect(() => setMounted(true), []);
-  useEffect(() => {
-    if (!pulse) return;
-    setBump(true);
-    const t = setTimeout(() => setBump(false), 450);
-    return () => clearTimeout(t);
-  }, [pulse]);
+  const mounted = useHydrated();
 
   const count = mounted ? computeTotals(lines).count : 0;
   const stack = mounted ? lines.slice(-3) : [];
@@ -34,10 +26,10 @@ export function CartTray() {
   return (
     <button
       id="cart-tray"
+      key={pulse}
       onClick={() => setOpen(true)}
       aria-label={`Open your tray, ${count} items`}
-      className={`relative flex h-12 items-center gap-2 rounded-full border border-white/15 bg-black/40 pl-2 pr-4 backdrop-blur-md transition hover:border-saffron ${bump ? "scale-110" : "scale-100"}`}
-      style={{ transitionDuration: bump ? "180ms" : "400ms" }}
+      className={`relative flex h-12 items-center gap-2 rounded-full border border-white/15 bg-black/40 pl-2 pr-4 backdrop-blur-md transition hover:border-saffron ${pulse ? "animate-[bump_.5s_cubic-bezier(.3,1.6,.5,1)]" : ""}`}
     >
       <span className="relative flex h-9 w-12 items-end justify-center">
         {stack.map((l, k) => (

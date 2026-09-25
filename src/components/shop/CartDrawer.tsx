@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useHydrated } from "@/lib/useHydrated";
 import { useCart, computeTotals } from "@/lib/cart";
 import { getItem, formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
@@ -22,8 +23,7 @@ export default function CartDrawer() {
   const open = useCart((s) => s.open);
   const setOpen = useCart((s) => s.setOpen);
   const lines = useCart((s) => s.lines);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);

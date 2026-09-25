@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useHydrated } from "@/lib/useHydrated";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart, computeTotals } from "@/lib/cart";
@@ -27,22 +28,14 @@ export default function Checkout() {
   const router = useRouter();
   const lines = useCart((s) => s.lines);
   const clear = useCart((s) => s.clear);
-  const [mounted, setMounted] = useState(false);
-  const [mode, setMode] = useState<OrderMode>("delivery");
+  const mounted = useHydrated();
+  // a QR scan at a table stores its number for the session
+  const [table, setTable] = useState(() => (typeof window === "undefined" ? "" : (sessionStorage.getItem("biteme-table") ?? "")));
+  const [mode, setMode] = useState<OrderMode>(() => (table ? "dinein" : "delivery"));
   const [payment, setPayment] = useState<PaymentMethod>("bkash");
-  const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const t = sessionStorage.getItem("biteme-table");
-    if (t) {
-      setTable(t);
-      setMode("dinein");
-    }
-  }, []);
 
   if (!mounted) return null;
 
