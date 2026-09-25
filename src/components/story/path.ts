@@ -11,15 +11,19 @@ export const GAP = 38;
 export const stationPos = (i: number) =>
   new THREE.Vector3(Math.sin(i * 1.35) * 9, 0, -i * GAP);
 
-/** Where the camera rests at a station. */
+const LAST = CHAPTER_COUNT - 1;
+
+/** Where the camera rests at a station. The final table is shot from higher up. */
 export const camRest = (i: number, narrow: boolean) => {
   const s = stationPos(i);
+  if (i === LAST) return narrow ? s.add(new THREE.Vector3(0, 5.6, 9.4)) : s.add(new THREE.Vector3(0.4, 4.1, 7.6));
   return narrow ? s.add(new THREE.Vector3(0, 1.9, 8.6)) : s.add(new THREE.Vector3(0.6, 1.5, 6.4));
 };
 
 /** What the camera looks at while resting. Offsets frame the dish beside the copy. */
 export const lookRest = (i: number, narrow: boolean) => {
   const s = stationPos(i);
+  if (i === LAST) return narrow ? s.add(new THREE.Vector3(0, -0.4, 0.2)) : s.add(new THREE.Vector3(-2.3, 0.2, 0));
   return narrow ? s.add(new THREE.Vector3(0, -0.15, 0)) : s.add(new THREE.Vector3(-1.9, 0.75, 0));
 };
 
