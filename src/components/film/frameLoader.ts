@@ -3,8 +3,9 @@
 /**
  * Progressive frame loading for scroll-scrubbed films.
  * Frames arrive in passes (every 16th, then 8th, 4th, 2nd, all) so a scene is
- * scrubbable almost immediately and sharpens in time. Scenes are queued in page
- * order; only a few requests run at once.
+ * scrubbable almost immediately and sharpens in time. The queue is ordered by pass
+ * first, so a scene you are approaching gets its coarse frames ahead of another
+ * scene's fine detail. Only a few requests run at once.
  */
 export type Sequence = {
   frames: (HTMLImageElement | null)[];
@@ -14,9 +15,12 @@ export type Sequence = {
   onFirst: Promise<void>;
 };
 
+type Job = { url: string; seq: Sequence; index: number; pass: number; order: number };
+
 const MAX_PARALLEL = 6;
-const queue: { url: string; seq: Sequence; index: number }[] = [];
+const queue: Job[] = [];
 let active = 0;
+let seqCounter = 0;
 
 function pump() {
   while (active < MAX_PARALLEL && queue.length) {
@@ -25,10 +29,6 @@ function pump() {
     const img = new Image();
     img.decoding = "async";
     img.src = job.url;
-    const done = () => {
-      active--;
-      pump();
-    };
     img
       .decode()
       .then(() => {
@@ -36,23 +36,29 @@ function pump() {
         job.seq.loaded++;
       })
       .catch(() => {})
-      .finally(done);
+      .finally(() => {
+        active--;
+        pump();
+      });
   }
 }
 
-function passOrder(n: number) {
-  const seen = new Set<number>();
-  const order: number[] = [];
-  const take = (i: number) => {
-    if (seen.has(i)) return;
-    seen.add(i);
-    order.push(i);
-  };
-  for (const stride of [16, 8, 4, 2, 1]) {
+const STRIDES = [16, 8, 4, 2, 1];
+
+/** Frame indices grouped by pass: every 16th frame, then the 8ths not yet taken, and so on. */
+function passes(n: number) {
+  const seen = new Set<number>([0]);
+  return STRIDES.map((stride) => {
+    const out: number[] = [];
+    const take = (i: number) => {
+      if (seen.has(i)) return;
+      seen.add(i);
+      out.push(i);
+    };
     for (let i = 0; i < n; i += stride) take(i);
     take(n - 1);
-  }
-  return order;
+    return out;
+  });
 }
 
 export function loadSequence(base: string, count: number): Sequence {
@@ -87,10 +93,12 @@ export function loadSequence(base: string, count: number): Sequence {
     .catch(() => {})
     .finally(resolveFirst);
 
-  for (const i of passOrder(count)) {
-    if (i === 0) continue;
-    queue.push({ url: `${base}/${String(i).padStart(3, "0")}.webp`, seq, index: i });
-  }
+  const order = seqCounter++;
+  passes(count).forEach((indices, pass) => {
+    for (const index of indices) queue.push({ url: `${base}/${String(index).padStart(3, "0")}.webp`, seq, index, pass, order });
+  });
+  // coarse passes of every scene before anyone's fine detail; earlier scenes first within a pass
+  queue.sort((a, b) => a.pass - b.pass || a.order - b.order || a.index - b.index);
   pump();
   return seq;
 }

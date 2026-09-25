@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { loadSequence, type Sequence } from "./frameLoader";
-import { drawFrame } from "./draw";
+import { drawFilm, sizeCanvas, approach } from "./draw";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,12 +29,14 @@ type Props = {
   length?: number;
   /** callback for the first frame being ready (hero uses it to lift the loader) */
   onReady?: () => void;
+  /** which side the copy sits on (desktop) — scenes alternate to cross the page */
+  side?: "left" | "right";
 };
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-export default function FilmScene({ id, film, frames, aspect, bg, beats, length = 320, onReady }: Props) {
+export default function FilmScene({ id, film, frames, aspect, bg, beats, length = 320, onReady, side = "left" }: Props) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -48,34 +50,27 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       if (seq) return;
       seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames);
       seq.onFirst.then(() => {
-        lastDrawn = null;
-        draw();
+        dirty = true;
         onReady?.();
       });
     };
+    // target = where the scrollbar is; shown = the eased playhead we actually render
     let progress = 0;
-    let lastDrawn: HTMLImageElement | null = null;
-    let lastW = 0;
-    let lastH = 0;
+    let shown = 0;
+    let drawnPos = -1;
+    let drawnLoaded = -1;
+    let dirty = true;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = cv.clientWidth;
-      const h = cv.clientHeight;
-      cv.width = Math.round(w * dpr);
-      cv.height = Math.round(h * dpr);
-      lastDrawn = null;
+      sizeCanvas(cv);
+      dirty = true;
     };
 
     const draw = () => {
       if (!seq) return;
-      const idx = Math.round(progress * (frames - 1));
-      const img = seq.nearest(idx);
-      if (!img) return;
-      if (img === lastDrawn && cv.width === lastW && cv.height === lastH) return;
-      lastDrawn = img;
-      lastW = cv.width;
-      lastH = cv.height;
+      const pos = shown * (frames - 1);
+      // skip redundant paints: same position, nothing new loaded, no resize
+      if (!dirty && Math.abs(pos - drawnPos) < 0.004 && seq.loaded === drawnLoaded) return;
       const W = cv.width;
       const H = cv.height;
       let dw: number, dh: number, dx: number, dy: number;
@@ -86,13 +81,17 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
         dx = (W - dw) / 2;
         dy = H * 0.36 - dh / 2;
       } else {
-        // desktop: dish sits in the right half so the copy owns the left column
+        // desktop: the dish takes the half opposite the copy
         dh = Math.min(H * 0.86, (W * 0.62) / aspect * 1.6);
         dw = dh * aspect;
-        dx = W * 0.68 - dw / 2;
+        dx = W * (side === "left" ? 0.68 : 0.32) - dw / 2;
         dy = (H - dh) / 2 + H * 0.03;
       }
-      drawFrame(ctx, img, bg, dx, dy, dw, dh);
+      if (drawFilm(ctx, seq, pos, bg, dx, dy, dw, dh)) {
+        drawnPos = pos;
+        drawnLoaded = seq.loaded;
+        dirty = false;
+      }
     };
 
     // per-beat word stagger
@@ -105,8 +104,8 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
     const renderCopy = () => {
       for (const b of beatEls) {
         const [a, z] = b.at;
-        const inT = a <= 0 ? 1 : clamp((progress - a) / 0.07);
-        const outT = z >= 1 ? 0 : clamp((progress - z) / 0.07);
+        const inT = a <= 0 ? 1 : clamp((shown - a) / 0.07);
+        const outT = z >= 1 ? 0 : clamp((shown - z) / 0.07);
         const vis = inT * (1 - outT);
         b.el.style.visibility = vis > 0.001 ? "visible" : "hidden";
         b.el.style.pointerEvents = vis > 0.8 ? "auto" : "none";
@@ -137,7 +136,9 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       },
     });
 
-    const tick = () => {
+    const tick = (_time: number, deltaMs: number) => {
+      shown = approach(shown, progress, deltaMs);
+      if (Math.abs(shown - progress) < 0.0001) shown = progress;
       draw();
       renderCopy();
     };
@@ -151,13 +152,13 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       gsap.ticker.remove(tick);
       ro.disconnect();
     };
-  }, [film, frames, aspect, bg, onReady]);
+  }, [film, frames, aspect, bg, onReady, side]);
 
   return (
     <section ref={section} id={id} className="relative" style={{ height: `${length}vh`, background: bg }}>
       <div className="sticky top-0 h-dvh overflow-hidden">
         <canvas ref={canvas} className="absolute inset-0 h-full w-full" aria-hidden />
-        <div ref={copy} className="absolute inset-x-0 bottom-0 top-auto px-5 pb-[max(2rem,env(safe-area-inset-bottom))] md:inset-y-0 md:left-[5vw] md:right-auto md:flex md:w-[min(560px,40vw)] md:flex-col md:justify-center md:px-0 md:pb-0">
+        <div ref={copy} className={`absolute inset-x-0 bottom-0 top-auto px-5 pb-[max(2rem,env(safe-area-inset-bottom))] md:inset-y-0 ${side === "left" ? "md:left-[5vw] md:right-auto" : "md:left-auto md:right-[5vw]"} md:flex md:w-[min(560px,40vw)] md:flex-col md:justify-center md:px-0 md:pb-0`}>
           {beats.map((b, i) => (
             <div key={i} data-beat={JSON.stringify(b.at)} className="absolute inset-x-5 bottom-[max(2rem,env(safe-area-inset-bottom))] md:inset-x-0 md:bottom-auto" style={{ visibility: b.at[0] <= 0 ? "visible" : "hidden" }}>
               {b.kicker && (

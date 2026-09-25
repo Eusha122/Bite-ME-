@@ -7,7 +7,7 @@ import { menu, formatBDT, cuisineName } from "@/config/menu";
 import { useCart, flyToCart } from "@/lib/cart";
 import { dishImage } from "@/lib/dishImage";
 import { loadSequence } from "./frameLoader";
-import { drawFrame } from "./draw";
+import { drawFilm, sizeCanvas, approach } from "./draw";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -18,8 +18,9 @@ export type FilmMeta = { frames: number; perClip: number; clips: number; aspect:
  * away and bringing dish k+1 round to the front. Scroll choreography per dish:
  *   HOLD (dish faces you, order panel up) → TURN (scrub the quarter-turn clip)
  */
-const HOLD = 1.4;
-const TURN = 1;
+const HOLD = 1.2;
+// generous scroll per quarter-turn keeps the rotation slow and silky
+const TURN = 1.6;
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (t: number) => {
@@ -85,29 +86,28 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     const cv = canvas.current!;
     const ctx = cv.getContext("2d", { alpha: false })!;
     let seq: ReturnType<typeof loadSequence> | null = null;
+    // target = scrollbar position; shown = eased playhead that is actually rendered
     let progress = 0;
-    let lastKey = "";
-    let lastImg: HTMLImageElement | null = null;
+    let shown = 0;
+    let drawnPos = -1;
+    let drawnLoaded = -1;
+    let dirty = true;
     let lastDish = -1;
 
     const narrow = () => cv.clientWidth / cv.clientHeight < 1;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      cv.width = Math.round(cv.clientWidth * dpr);
-      cv.height = Math.round(cv.clientHeight * dpr);
-      lastKey = "";
+      sizeCanvas(cv);
+      dirty = true;
     };
 
-    const draw = () => {
+    const draw = (_time: number, deltaMs: number) => {
       if (!seq) return;
-      const s = stateAt(progress, meta);
-      const idx = Math.round(clamp(s.frame, 0, meta.frames - 1));
-      const img = seq.nearest(idx);
-      // redraw when the frame changes, the canvas resizes, or a sharper frame for this index arrives
-      const size = `${cv.width}x${cv.height}`;
-      if (img && (img !== lastImg || size !== lastKey)) {
-        lastImg = img;
-        lastKey = size;
+      shown = approach(shown, progress, deltaMs);
+      if (Math.abs(shown - progress) < 0.00005) shown = progress;
+      const s = stateAt(shown, meta);
+      const pos = clamp(s.frame, 0, meta.frames - 1);
+      // repaint only when the playhead moved, a frame arrived, or the canvas resized
+      if (dirty || Math.abs(pos - drawnPos) > 0.004 || seq.loaded !== drawnLoaded) {
         const W = cv.width;
         const H = cv.height;
         let dw: number, dh: number, cx: number, cy: number;
@@ -122,7 +122,11 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
           cx = W * 0.64;
           cy = H * 0.52;
         }
-        drawFrame(ctx, img, meta.bg, cx - dw / 2, cy - dh / 2, dw, dh);
+        if (drawFilm(ctx, seq, pos, meta.bg, cx - dw / 2, cy - dh / 2, dw, dh)) {
+          drawnPos = pos;
+          drawnLoaded = seq.loaded;
+          dirty = false;
+        }
       }
       if (s.dish !== lastDish) {
         lastDish = s.dish;
@@ -145,10 +149,11 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     // start downloading a few screens before the table arrives
     const warm = ScrollTrigger.create({
       trigger: section.current,
-      start: "top 300%",
+      start: "top 600%",
       once: true,
       onEnter: () => {
         seq = loadSequence(`/film/table/${narrow() ? "m" : "d"}`, meta.frames);
+        seq.onFirst.then(() => (dirty = true));
       },
     });
     gsap.ticker.add(draw);
