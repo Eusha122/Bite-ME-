@@ -83,7 +83,7 @@ export default function OrderTracker({ id }: { id: string }) {
   if (!order) return <div className="flex min-h-[50vh] items-center justify-center text-cream-dim">Finding your order…</div>;
 
   const flow = flowFor(order.mode);
-  const idx = order.status === "cancelled" ? -1 : flow.indexOf(order.status as (typeof flow)[number]);
+  const idx = order.status === "cancelled" ? -1 : flow.indexOf(order.status);
   const at = (s: OrderStatus) => order.timeline.find((t) => t.status === s)?.at;
   const eta = order.mode === "delivery" ? "30–45 min" : order.mode === "pickup" ? "≈ 20 min" : "≈ 15 min";
 

@@ -33,7 +33,7 @@ export type Reservation = {
 };
 
 /** Pickup/dine-in orders skip the "out for delivery" step. */
-export const flowFor = (mode: OrderMode) =>
+export const flowFor = (mode: OrderMode): readonly OrderStatus[] =>
   mode === "delivery" ? ORDER_FLOW : ORDER_FLOW.filter((s) => s !== "out");
 
 export const statusLabel: Record<OrderStatus, string> = {

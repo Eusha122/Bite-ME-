@@ -27,7 +27,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/orders/[id
   if (!(await isStaff())) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
   const { id } = await ctx.params;
   const { status } = (await req.json().catch(() => ({}))) as { status?: OrderStatus };
-  if (!status || (![...ORDER_FLOW, "cancelled"] as string[]).includes(status)) {
+  const allowed: string[] = [...ORDER_FLOW, "cancelled"];
+  if (!status || !allowed.includes(status)) {
     return NextResponse.json({ error: "Bad status" }, { status: 400 });
   }
   const o = await updateOrder(id, (o) => {
