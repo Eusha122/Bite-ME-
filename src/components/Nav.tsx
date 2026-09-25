@@ -209,7 +209,8 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <OrderNow className="h-11 px-4 text-sm md:h-12 md:px-6 md:text-base" />
+            {/* the open phone menu has its own big Order now */}
+            <OrderNow className={`h-11 px-4 text-sm md:h-12 md:px-6 md:text-base ${menuOpen ? "invisible md:visible" : ""}`} />
             <CartButton className="h-11 w-11 md:h-12 md:w-12" />
             <button
               onClick={() => setMenuOpen((o) => !o)}
