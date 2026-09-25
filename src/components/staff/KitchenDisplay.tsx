@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cuisines } from "@/config/menu";
 import { flowFor, statusLabel, type Order, type OrderStatus } from "@/lib/types";
 import { Logo } from "../Nav";
+import { chime } from "@/lib/chime";
 
 const COLUMNS: { status: OrderStatus; title: string }[] = [
   { status: "placed", title: "New" },
@@ -20,26 +21,6 @@ const ACTION: Partial<Record<OrderStatus, string>> = {
   ready: "Hand over",
   out: "Delivered",
 };
-
-/** Two-tone chime generated with WebAudio — no sound file needed. */
-function chime() {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    [880, 1320].forEach((f, i) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.frequency.value = f;
-      o.type = "sine";
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
-      g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + i * 0.18 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.5);
-      o.connect(g).connect(ctx.destination);
-      o.start(ctx.currentTime + i * 0.18);
-      o.stop(ctx.currentTime + i * 0.18 + 0.55);
-    });
-  } catch {}
-}
 
 function Elapsed({ from }: { from: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -129,7 +110,8 @@ export default function KitchenDisplay() {
 
   const move = async (id: string, status: OrderStatus) => {
     setOrders((os) => os.map((o) => (o.id === id ? { ...o, status } : o)));
-    await fetch(`/api/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    const body = status === "cancelled" ? { status, cancelReason: "Rejected by the kitchen" } : { status };
+    await fetch(`/api/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     load();
   };
 
@@ -160,7 +142,7 @@ export default function KitchenDisplay() {
           >
             {sound ? "🔔 Chime on" : "🔕 Enable chime"}
           </button>
-          <Link href="/admin" className="rounded-full border border-line px-4 py-2 text-ink-2">
+          <Link href="/admin/orders" className="rounded-full border border-line px-4 py-2 text-ink-2">
             Dashboard
           </Link>
         </div>

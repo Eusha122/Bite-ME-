@@ -6,21 +6,24 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { menu, formatBDT, cuisineName } from "@/config/menu";
 import { useCart, flyToCart } from "@/lib/cart";
 import { dishImage } from "@/lib/dishImage";
-import { loadSequence } from "./frameLoader";
-import { drawFilm, sizeCanvas, approach } from "./draw";
+import { loadSequence, type Sequence } from "./frameLoader";
+import { drawFilm, sizeCanvas } from "./draw";
+import { lenis } from "./SmoothScroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export type FilmMeta = { frames: number; perClip: number; clips: number; aspect: number; bg: string };
 
 /*
- * The rotating table. Clip k turns the lazy susan a quarter turn, carrying dish k
- * away and bringing dish k+1 round to the front. Scroll choreography per dish:
- *   HOLD (dish faces you, order panel up) → TURN (scrub the quarter-turn clip)
+ * The rotating table, in STEP mode.
+ * Clip k is a quarter-turn that carries dish k away and brings dish k+1 to the front.
+ * Instead of scrubbing with the scrollbar, one scroll gesture plays a whole turn on a
+ * clock (steady frame rate, eased), then the table rests until the next gesture.
+ * The section is still one viewport of scroll per dish, so the scrollbar, links and
+ * the back button all map to a dish.
  */
-const HOLD = 1.2;
-// generous scroll per quarter-turn keeps the rotation slow and silky
-const TURN = 1.6;
+const TURN_SECONDS = 1.35;
+const QUIET_MS = 160; // gap in wheel events that marks the end of a gesture
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (t: number) => {
@@ -30,20 +33,18 @@ const smooth = (t: number) => {
 
 /** n clips connect n+1 dishes. */
 const dishCount = (meta: FilmMeta) => Math.min(menu.length, meta.clips + 1);
+/** frame where dish k rests facing the camera */
+const restFrame = (k: number, per: number) => (k === 0 ? 0 : k * per - 1);
 
-function stateAt(p: number, meta: FilmMeta) {
-  const n = dishCount(meta);
-  const per = meta.perClip;
-  const total = n * HOLD + (n - 1) * TURN;
-  const t = p * total;
-  const k = Math.min(n - 1, Math.floor(t / (HOLD + TURN)));
-  const local = t - k * (HOLD + TURN);
-  const rest = (i: number) => (i === 0 ? 0 : i * per - 1);
-  if (local < HOLD || k === n - 1) return { frame: rest(k), dish: k, show: 1 };
-  // mid-turn the copy hands over: the leaving dish fades out, the arriving one fades in
-  const u = (local - HOLD) / TURN;
-  const arriving = u >= 0.5;
-  return { frame: k * per + u * (per - 1), dish: arriving ? k + 1 : k, show: smooth(Math.abs(u - 0.5) * 2 * 1.4) };
+/** Copy state from the playhead: swap dishes half-way through a turn, fading through it. */
+function copyAt(pos: number, per: number, n: number) {
+  const k = Math.min(n - 2, Math.max(0, Math.floor((pos + 1) / per)));
+  const a = restFrame(k, per);
+  const b = restFrame(k + 1, per);
+  if (pos <= a + 0.01) return { dish: k, show: 1 };
+  if (pos >= b - 0.01) return { dish: k + 1, show: 1 };
+  const u = (pos - a) / (b - a);
+  return { dish: u < 0.5 ? k : k + 1, show: smooth(Math.abs(u - 0.5) * 2 * 1.4) };
 }
 
 function DishCopy({ index }: { index: number }) {
@@ -80,34 +81,44 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const copy = useRef<HTMLDivElement>(null);
+  const hint = useRef<HTMLParagraphElement>(null);
   const [dish, setDish] = useState(0);
 
   useEffect(() => {
     const cv = canvas.current!;
+    const sec = section.current!;
     const ctx = cv.getContext("2d", { alpha: false })!;
-    let seq: ReturnType<typeof loadSequence> | null = null;
-    // target = scrollbar position; shown = eased playhead that is actually rendered
-    let progress = 0;
-    let shown = 0;
+    const n = dishCount(meta);
+    const per = meta.perClip;
+
+    let seq: Sequence | null = null;
+    const play = { pos: 0 }; // playhead in frames, driven by tweens (time), never by scroll
+    let current = 0; // dish the table is resting on / heading to
+    let tween: gsap.core.Tween | null = null;
+    let lastWheel = 0;
+    let gestureUsed = false;
+    let settleUntil = 0;
     let drawnPos = -1;
     let drawnLoaded = -1;
     let dirty = true;
     let lastDish = -1;
 
     const narrow = () => cv.clientWidth / cv.clientHeight < 1;
+    const vh = () => window.innerHeight;
+    const dishY = (k: number) => sec.offsetTop + k * vh();
+    /** true while the table is pinned and we own the scroll gestures */
+    const pinned = () => {
+      const y = window.scrollY;
+      return y >= sec.offsetTop - 2 && y <= sec.offsetTop + sec.offsetHeight - vh() + 2;
+    };
+
     const resize = () => {
       sizeCanvas(cv);
       dirty = true;
     };
 
-    const draw = (_time: number, deltaMs: number) => {
-      if (!seq) return;
-      shown = approach(shown, progress, deltaMs);
-      if (Math.abs(shown - progress) < 0.00005) shown = progress;
-      const s = stateAt(shown, meta);
-      const pos = clamp(s.frame, 0, meta.frames - 1);
-      // repaint only when the playhead moved, a frame arrived, or the canvas resized
-      if (dirty || Math.abs(pos - drawnPos) > 0.004 || seq.loaded !== drawnLoaded) {
+    const draw = () => {
+      if (seq && (dirty || Math.abs(play.pos - drawnPos) > 0.002 || seq.loaded !== drawnLoaded)) {
         const W = cv.width;
         const H = cv.height;
         let dw: number, dh: number, cx: number, cy: number;
@@ -122,33 +133,133 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
           cx = W * 0.64;
           cy = H * 0.52;
         }
-        if (drawFilm(ctx, seq, pos, meta.bg, cx - dw / 2, cy - dh / 2, dw, dh)) {
-          drawnPos = pos;
+        if (drawFilm(ctx, seq, play.pos, meta.bg, cx - dw / 2, cy - dh / 2, dw, dh)) {
+          drawnPos = play.pos;
           drawnLoaded = seq.loaded;
           dirty = false;
         }
       }
-      if (s.dish !== lastDish) {
-        lastDish = s.dish;
-        setDish(s.dish);
+      const c = copyAt(play.pos, per, n);
+      if (c.dish !== lastDish) {
+        lastDish = c.dish;
+        setDish(c.dish);
       }
       if (copy.current) {
-        copy.current.style.opacity = String(s.show);
-        copy.current.style.transform = `translate3d(0, ${(1 - s.show) * 28}px, 0)`;
-        copy.current.style.pointerEvents = s.show > 0.8 ? "auto" : "none";
+        copy.current.style.opacity = String(c.show);
+        copy.current.style.transform = `translate3d(0, ${(1 - c.show) * 28}px, 0)`;
+        copy.current.style.pointerEvents = c.show > 0.8 ? "auto" : "none";
+      }
+      if (hint.current) hint.current.style.opacity = current < n - 1 ? "1" : "0";
+    };
+
+    /** Play the table to dish k; optionally move the page to that dish's scroll position too. */
+    const goTo = (k: number, moveScroll: boolean) => {
+      k = Math.max(0, Math.min(n - 1, k));
+      if (k === current && !tween) return;
+      const steps = Math.max(1, Math.abs(k - current));
+      current = k;
+      tween?.kill();
+      const duration = Math.min(TURN_SECONDS * steps, TURN_SECONDS + 0.45 * (steps - 1));
+      tween = gsap.to(play, {
+        pos: restFrame(k, per),
+        duration,
+        ease: steps === 1 ? "power2.inOut" : "power1.inOut",
+        onComplete: () => {
+          tween = null;
+        },
+      });
+      if (moveScroll) lenis()?.scrollTo(dishY(k), { duration, lock: true, force: true });
+    };
+
+    /**
+     * A scroll gesture while pinned: one dish per gesture, or leave the section at the ends.
+     * A gesture is a run of wheel events without a QUIET_MS gap — so a long trackpad
+     * flick (with its inertia tail) turns the table exactly once.
+     */
+    const step = (dir: 1 | -1) => {
+      const now = performance.now();
+      if (now - lastWheel > QUIET_MS) gestureUsed = false; // a pause starts a new gesture
+      lastWheel = now;
+      if (now < settleUntil) return true; // tail of the gesture that carried us in
+      const next = current + dir;
+      if (!tween && !gestureUsed && (next < 0 || next > n - 1)) return false; // let the page scroll out
+      if (tween || gestureUsed) return true; // swallow: already turning, or this gesture already turned
+      gestureUsed = true;
+      goTo(next, true);
+      return true;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (!pinned() || Math.abs(e.deltaY) < 2) return;
+      if (step(e.deltaY > 0 ? 1 : -1)) {
+        e.preventDefault();
+        e.stopPropagation(); // keep Lenis from also scrolling
       }
     };
 
-    resize();
+    let touchY: number | null = null;
+    let touchUsed = false;
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0].clientY;
+      touchUsed = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchY === null || !pinned()) return;
+      const dy = touchY - e.touches[0].clientY;
+      const dir: 1 | -1 = dy > 0 ? 1 : -1;
+      const next = current + dir;
+      const leaving = !tween && (next < 0 || next > n - 1);
+      if (leaving) return; // native scroll carries the page out of the menu
+      e.preventDefault();
+      if (!touchUsed && Math.abs(dy) > 36) {
+        touchUsed = true; // one swipe = one dish
+        step(dir);
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!pinned() || (e.target as HTMLElement)?.closest("input, textarea, select")) return;
+      const down = ["ArrowDown", "PageDown", " "].includes(e.key);
+      const up = ["ArrowUp", "PageUp"].includes(e.key);
+      if (!down && !up) return;
+      lastWheel = 0; // keys are always a fresh gesture
+      if (step(down ? 1 : -1)) e.preventDefault();
+    };
+
+    /**
+     * Arriving with momentum (smooth wheel or a phone fling) would sail past the first
+     * dish, so we catch the page and settle it on the edge dish instead. Scrollbar drags
+     * ('native' on desktop) are left alone.
+     */
+    const settle = (k: number) => {
+      if (tween) return; // our own turn is moving the page — not an arrival
+      const l = lenis();
+      const touch = window.matchMedia("(pointer: coarse)").matches;
+      if (!l || (l.isScrolling !== "smooth" && !touch)) return;
+      settleUntil = performance.now() + 450; // swallow the tail of the arriving gesture
+      gestureUsed = true;
+      current = k;
+      // a short "settle" tween doubles as the guard that keeps onUpdate from re-targeting mid-catch
+      tween = gsap.to(play, { pos: restFrame(k, per), duration: 0.55, ease: "power2.out", onComplete: () => (tween = null) });
+      l.scrollTo(dishY(k), { duration: 0.55, lock: true, force: true });
+    };
+
+    // scrollbar drags, anchor links, back/forward: follow the scroll position to a dish
     const st = ScrollTrigger.create({
-      trigger: section.current,
+      trigger: sec,
       start: "top top",
       end: "bottom bottom",
-      onUpdate: (self) => (progress = self.progress),
+      onEnter: () => settle(0),
+      onEnterBack: () => settle(n - 1),
+      onUpdate: (self) => {
+        if (tween) return;
+        const k = Math.round(self.progress * (n - 1));
+        if (k !== current) goTo(k, false);
+      },
     });
-    // start downloading a few screens before the table arrives
+
     const warm = ScrollTrigger.create({
-      trigger: section.current,
+      trigger: sec,
       start: "top 600%",
       once: true,
       onEnter: () => {
@@ -156,22 +267,32 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
         seq.onFirst.then(() => (dirty = true));
       },
     });
+
+    resize();
     gsap.ticker.add(draw);
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKey);
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
     return () => {
       st.kill();
       warm.kill();
+      tween?.kill();
       gsap.ticker.remove(draw);
+      window.removeEventListener("wheel", onWheel, { capture: true });
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
       ro.disconnect();
     };
   }, [meta]);
 
   const n = dishCount(meta);
-  const length = Math.round((n * HOLD + (n - 1) * TURN) * 75);
 
   return (
-    <section ref={section} id="menu" className="relative" style={{ height: `${length}vh`, background: meta.bg }} aria-label="The menu">
+    <section ref={section} id="menu" className="relative" style={{ height: `${n * 100}vh`, background: meta.bg }} aria-label="The menu">
       <div className="sticky top-0 h-dvh overflow-hidden">
         <canvas ref={canvas} className="absolute inset-0 h-full w-full" aria-hidden />
 
@@ -193,6 +314,10 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
         <div ref={copy} className="absolute inset-x-5 bottom-[max(2rem,env(safe-area-inset-bottom))] md:inset-x-auto md:bottom-auto md:left-[5vw] md:top-1/2 md:w-[min(520px,36vw)] md:-translate-y-1/2">
           <DishCopy key={dish} index={dish} />
         </div>
+
+        <p ref={hint} className="absolute bottom-6 left-[5vw] hidden text-step--1 font-extrabold uppercase tracking-[0.18em] text-ink-2 transition-opacity duration-500 md:block">
+          Scroll to turn the table ↓
+        </p>
       </div>
     </section>
   );
