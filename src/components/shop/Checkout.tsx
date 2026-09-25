@@ -85,7 +85,7 @@ export default function Checkout() {
     const form = e.currentTarget;
     if (!form.reportValidity()) return;
     if (payment === "cod") return place(form);
-    // Demo gateway hand-off. In production this redirects to SSLCommerz / bKash (see src/lib/payments.ts).
+    // Demo gateway hand-off. In production this step redirects to the SSLCommerz payment page.
     setPaying(true);
     await new Promise((r) => setTimeout(r, 1800));
     await place(form);

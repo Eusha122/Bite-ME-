@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "film:table": "node scripts/extract-frames.mjs table 48 assets-src/video/table-turn-01.mp4 assets-src/video/table-turn-02.mp4 assets-src/video/table-turn-03.mp4 assets-src/video/table-turn-04.mp4 assets-src/video/table-turn-05.mp4 assets-src/video/table-turn-06.mp4 assets-src/video/table-turn-07.mp4 assets-src/video/table-turn-08.mp4 assets-src/video/table-turn-09.mp4"
   },
   "dependencies": {
     "gsap": "^3.15.0",

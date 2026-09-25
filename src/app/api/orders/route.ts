@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     note: body.note?.trim().slice(0, 300) || undefined,
     lines,
     totals: { subtotal, vat, delivery, total: subtotal + vat + delivery },
-    // Demo mode: wallet/card payments are simulated as paid. See src/lib/payments.ts for the live gateway seam.
+    // Demo mode: wallet/card payments are simulated as paid. Go-live: create an SSLCommerz session here, mark paid from its IPN callback.
     payment: { method, status: method === "cod" ? "cod" : "paid" },
     status: "placed",
     timeline: [{ status: "placed", at: now }],

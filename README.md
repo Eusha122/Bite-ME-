@@ -1,37 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BiteME — scroll-film restaurant template
 
-## Getting Started
+A cinematic, scroll-driven restaurant site with real online ordering. Every visual on the home page is **AI-generated video, scrubbed frame-by-frame by scroll** (Apple-style image sequences on `<canvas>`), on a flat cream design system with puffy display type.
 
-First, run the development server:
+- **Story films** — burger assembling, kacchi handi opening, pizza cheese-pull, ramen noodle-lift.
+- **Rotating table menu** — a lazy susan turns a quarter-turn per dish as you scroll; each dish stops in front with its story, price and *Order now*.
+- **Ordering** — cart, checkout (delivery / pickup / dine-in QR), bKash · Nagad · card · cash (demo gateway), live order tracking.
+- **Staff** — `/kitchen` live kitchen display with chime, `/admin` owner dashboard (sales, best sellers, sold-out switches, reservations, printable table QR codes). Demo PIN `1234`.
+
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment (set in production):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Var | Purpose |
+|---|---|
+| `STAFF_PIN` | PIN for kitchen + dashboard (default `1234`) |
+| `STAFF_SECRET` | HMAC secret for the staff cookie |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Orders are stored in `.data/db.json` — fine for a demo or a single-location VPS. For serverless hosting, replace `src/lib/db.ts` with Postgres/Supabase (the API routes only call its exported functions).
 
-## Learn More
+## Re-skinning for a new restaurant
 
-To learn more about Next.js, take a look at the following resources:
+1. **Brand & info** — `src/config/site.ts` (name, address, hours, phone, VAT, delivery fee).
+2. **Menu** — `src/config/menu.ts` (10 dishes; each gets a stop on the rotating table).
+3. **Dish photos** — `public/menu/<id>.webp` (transparent cut-outs, used in cart & tracker).
+4. **Logo** — `public/brand/logo.webp`.
+5. **Colours** — tokens at the top of `src/app/globals.css`. `--paper` must match the background baked into the films.
+6. **Films** — see below. Story copy lives in `src/components/film/Home.tsx`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Making the films
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Each film is generated as **start frame → end frame → video**, then sliced into frames:
 
-## Deploy on Vercel
+1. Generate a start and an end still on a flat cream background (same camera, same subject).
+2. Generate a video between them (MiniMax H3 keyframe mode, 6–8 s, locked-off camera).
+3. Slice it:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+node scripts/extract-frames.mjs <name> <framesPerClip> <clip.mp4> [more clips...]
+# story scene:  node scripts/extract-frames.mjs pizza 120 assets-src/video/pizza.mp4
+# rotating table (9 chained quarter-turns): npm run film:table
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Bite-ME-
+This writes `public/film/<name>/{d,m}/NNN.webp` (desktop 1440px / phone 900px) and `meta.json`. A scene appears automatically once its `meta.json` exists. Frames load progressively (coarse → fine) and only when a scene is about three screens away.
+
+## Structure
+
+```
+src/components/film/   FilmScene (scroll-scrubbed canvas + kinetic copy), MenuTable, Intro, frame loader
+src/components/shop/   cart drawer, checkout, order tracker
+src/components/staff/  kitchen display, dashboard, PIN gate
+src/app/api/           orders, reservations, sold-out, staff auth
+scripts/               extract-frames.mjs, fetch-assets.mjs
+```
+
+Live payments: wallet/card orders are marked paid in demo mode. Wire SSLCommerz (covers bKash, Nagad and cards) at the order-creation step before going live.

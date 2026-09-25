@@ -36,6 +36,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local order/reservation store (demo backend)
+/.data/
+
+# generated source media (large; regenerate from Higgsfield or keep in cloud storage)
+/assets-src/video/
+/assets-src/model/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
