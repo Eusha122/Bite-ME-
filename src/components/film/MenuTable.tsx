@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { menu, formatBDT, cuisineName } from "@/config/menu";
+import Link from "next/link";
+import { seedDishes, TABLE_DISH_IDS, formatBDT, cuisineName } from "@/config/menu";
 import { useCart, flyToCart } from "@/lib/cart";
-import { dishImage } from "@/lib/dishImage";
+import { useCatalog } from "../CatalogProvider";
 import { loadSequence, type Sequence } from "./frameLoader";
 import { drawFilm, sizeCanvas } from "./draw";
 import { lenis } from "./SmoothScroll";
@@ -32,7 +33,7 @@ const smooth = (t: number) => {
 };
 
 /** n clips connect n+1 dishes. */
-const dishCount = (meta: FilmMeta) => Math.min(menu.length, meta.clips + 1);
+const dishCount = (meta: FilmMeta) => Math.min(TABLE_DISH_IDS.length, meta.clips + 1);
 /** frame where dish k rests facing the camera */
 const restFrame = (k: number, per: number) => (k === 0 ? 0 : k * per - 1);
 
@@ -48,14 +49,19 @@ function copyAt(pos: number, per: number, n: number) {
 }
 
 function DishCopy({ index }: { index: number }) {
-  const item = menu[index];
+  const { dish } = useCatalog();
+  const id = TABLE_DISH_IDS[index];
+  // the live menu wins (price, name, availability); the film's own dish is the fallback
+  const live = dish(id);
+  const item = live ?? seedDishes.find((d) => d.id === id);
+  const orderable = !!live && live.available;
   const add = useCart((s) => s.add);
   const [added, setAdded] = useState(false);
   if (!item) return null;
   return (
     <div>
       <p className="mb-4 text-step--1 font-extrabold uppercase tracking-[0.18em] text-tomato">
-        {String(index + 1).padStart(2, "0")} / {String(menu.length).padStart(2, "0")} · {cuisineName(item.cuisine)}
+        {String(index + 1).padStart(2, "0")} / {String(TABLE_DISH_IDS.length).padStart(2, "0")} · {cuisineName(item.cuisine)}
       </p>
       <h3 className="puff puff-tomato text-step-6 md:text-step-7">{item.name}</h3>
       <p className="mt-4 text-step-1 font-extrabold text-ink md:text-step-2">{item.line}</p>
@@ -63,16 +69,20 @@ function DishCopy({ index }: { index: number }) {
       <div className="mt-7 flex flex-wrap items-center gap-5">
         <span className="puff puff-ink text-step-5">{formatBDT(item.price)}</span>
         <button
+          disabled={!orderable}
           onClick={(e) => {
             add(item.id);
-            flyToCart(dishImage(item.id), { x: e.clientX, y: e.clientY });
+            flyToCart(item.image, { x: e.clientX, y: e.clientY });
             setAdded(true);
           }}
-          className="h-14 rounded-full bg-tomato px-8 text-step-1 font-extrabold text-page shadow-[0_5px_0_var(--tomato-deep)] active:translate-y-[3px] active:shadow-[0_2px_0_var(--tomato-deep)]"
+          className="h-14 rounded-full bg-tomato px-8 text-step-1 font-extrabold text-page shadow-[0_5px_0_var(--tomato-deep)] active:translate-y-[3px] active:shadow-[0_2px_0_var(--tomato-deep)] disabled:bg-paper-2 disabled:text-ink-2 disabled:shadow-none"
         >
-          {added ? "Added ✓" : "Order now"}
+          {!orderable ? "Sold out today" : added ? "Added ✓" : "Order now"}
         </button>
       </div>
+      <Link href="/menu" className="mt-5 inline-block text-step-0 font-extrabold text-ink underline decoration-2 underline-offset-4">
+        Browse the full menu →
+      </Link>
     </div>
   );
 }

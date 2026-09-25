@@ -5,9 +5,10 @@ import { useHydrated } from "@/lib/useHydrated";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart, computeTotals } from "@/lib/cart";
-import { getItem, formatBDT } from "@/config/menu";
+import { formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
-import { dishImage } from "@/lib/dishImage";
+import { useCatalog } from "../CatalogProvider";
+import DishImage from "../DishImage";
 import type { OrderMode, PaymentMethod } from "@/lib/types";
 import { QtyStepper } from "./CartDrawer";
 
@@ -28,6 +29,7 @@ export default function Checkout() {
   const router = useRouter();
   const lines = useCart((s) => s.lines);
   const clear = useCart((s) => s.clear);
+  const { dish } = useCatalog();
   const mounted = useHydrated();
   // a QR scan at a table stores its number for the session
   const [table, setTable] = useState(() => (typeof window === "undefined" ? "" : (sessionStorage.getItem("biteme-table") ?? "")));
@@ -39,7 +41,7 @@ export default function Checkout() {
 
   if (!mounted) return null;
 
-  const t = computeTotals(lines, mode);
+  const t = computeTotals(lines, dish, mode);
 
   if (lines.length === 0) {
     return (
@@ -178,12 +180,11 @@ export default function Checkout() {
         <h2 className="mb-4 puff text-2xl">Your tray</h2>
         <ul className="mb-4 flex max-h-[320px] flex-col gap-3 overflow-y-auto pr-1" data-lenis-prevent>
           {lines.map((l) => {
-            const item = getItem(l.id);
+            const item = dish(l.id);
             if (!item) return null;
             return (
               <li key={l.id} className="flex items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={dishImage(l.id)} alt="" className="h-12 w-12 object-contain" />
+                <DishImage dish={item} className="h-12 w-12 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{item.name}</div>
                   <div className="text-xs text-ink-2">{formatBDT(item.price * l.qty)}</div>

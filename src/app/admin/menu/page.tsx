@@ -1,5 +1,5 @@
-import { MenuAvailability } from "@/components/admin/ManageViews";
+import MenuManager from "@/components/admin/MenuManager";
 
 export default function AdminMenuPage() {
-  return <MenuAvailability />;
+  return <MenuManager />;
 }

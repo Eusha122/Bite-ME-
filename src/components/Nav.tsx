@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart, computeTotals } from "@/lib/cart";
 import { useHydrated } from "@/lib/useHydrated";
 import { site } from "@/config/site";
+import { useCatalog } from "./CatalogProvider";
 import { lenis, scrollToId } from "./film/SmoothScroll";
 
 export function Logo({ className = "h-9 md:h-11" }: { className?: string }) {
@@ -17,8 +18,9 @@ export function CartButton({ className = "h-12 w-12" }: { className?: string }) 
   const lines = useCart((s) => s.lines);
   const pulse = useCart((s) => s.pulse);
   const setOpen = useCart((s) => s.setOpen);
+  const { dish } = useCatalog();
   const hydrated = useHydrated();
-  const count = hydrated ? computeTotals(lines).count : 0;
+  const count = hydrated ? computeTotals(lines, dish).count : 0;
   return (
     <button
       id="cart-tray"
@@ -121,7 +123,6 @@ function useHideOnScroll(locked: boolean) {
 }
 
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const goMenu = useGoToMenu();
   const path = usePathname();
 
   useEffect(() => {
@@ -146,11 +147,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
           const on = path === l.href;
           const cls = `puff text-left text-step-7 ${on ? "puff-tomato" : "puff-ink"}`;
           const style = { transitionDelay: open ? `${80 + i * 60}ms` : "0ms" };
-          return l.id === "menu" ? (
-            <button key={l.id} style={style} className={`${cls} transition-transform duration-500 ${open ? "translate-y-0" : "translate-y-6"}`} onClick={() => (onClose(), goMenu())}>
-              {l.label}
-            </button>
-          ) : (
+          return (
             <Link key={l.id} href={l.href} onClick={onClose} style={style} className={`${cls} transition-transform duration-500 ${open ? "translate-y-0" : "translate-y-6"}`}>
               {l.label}
             </Link>
@@ -172,8 +169,20 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const { hidden, atTop } = useHideOnScroll(menuOpen);
-  const goMenu = useGoToMenu();
   const path = usePathname();
+  const bar = useRef<HTMLElement>(null);
+
+  // publish how much of the top of the screen the bar covers, so sticky page bars
+  // (like the menu's search) can slide down with it and back up when it hides
+  useEffect(() => {
+    document.documentElement.style.setProperty("--nav-h", hidden ? "0px" : `${bar.current?.offsetHeight ?? 0}px`);
+  }, [hidden]);
+  useEffect(
+    () => () => {
+      document.documentElement.style.removeProperty("--nav-h");
+    },
+    [],
+  );
 
   // close the phone menu when the route changes
   const [lastPath, setLastPath] = useState(path);
@@ -187,6 +196,7 @@ export default function Nav() {
   return (
     <>
       <header
+        ref={bar}
         className={`fixed inset-x-0 top-0 z-40 transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${hidden ? "-translate-y-full" : "translate-y-0"} ${
           atTop || menuOpen ? "bg-transparent" : "bg-paper shadow-[0_1px_0_var(--line)]"
         }`}
@@ -197,9 +207,9 @@ export default function Nav() {
           </Link>
 
           <nav aria-label="Site" className="hidden items-center gap-9 md:flex">
-            <button onClick={goMenu} className={linkCls("/menu")}>
+            <Link href="/menu" className={linkCls("/menu")} aria-current={path === "/menu" ? "page" : undefined}>
               Menu
-            </button>
+            </Link>
             <Link href="/reserve" className={linkCls("/reserve")} aria-current={path === "/reserve" ? "page" : undefined}>
               Reserve
             </Link>

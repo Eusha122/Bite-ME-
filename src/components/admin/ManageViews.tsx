@@ -2,53 +2,8 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { cuisineName, formatBDT, menu } from "@/config/menu";
 import { useAdmin } from "./AdminData";
 import { PageHeader, Segmented } from "./ui";
-
-/* ---------- menu availability ---------- */
-
-export function MenuAvailability() {
-  const { soldOut, setDishSoldOut } = useAdmin();
-  const off = menu.filter((m) => soldOut.includes(m.id)).length;
-  return (
-    <>
-      <PageHeader title="Menu" sub={off ? `${off} dish${off > 1 ? "es" : ""} switched off — guests can't order ${off > 1 ? "them" : "it"}.` : "Everything is available."} />
-      <ul className="grid gap-2 md:grid-cols-2">
-        {menu.map((m) => {
-          const isOff = soldOut.includes(m.id);
-          return (
-            <li key={m.id}>
-              <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-2xl border px-5 py-4 ${isOff ? "border-tomato/50 bg-tomato/5" : "border-line bg-page"}`}>
-                <span className="flex items-center gap-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/menu/${m.id}.webp`} alt="" className={`h-12 w-12 object-contain ${isOff ? "grayscale" : ""}`} />
-                  <span>
-                    <span className="block font-extrabold">{m.name}</span>
-                    <span className="text-xs font-semibold text-ink-2">
-                      {cuisineName(m.cuisine)} · {formatBDT(m.price)}
-                    </span>
-                  </span>
-                </span>
-                <span className="flex items-center gap-3 text-xs font-extrabold">
-                  <span className={isOff ? "text-tomato" : "text-basil"}>{isOff ? "Sold out" : "Available"}</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label={`${m.name} available`}
-                    checked={!isOff}
-                    onChange={(e) => setDishSoldOut(m.id, !e.target.checked)}
-                    className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-paper-2 transition before:block before:h-6 before:w-6 before:rounded-full before:bg-ink before:transition checked:bg-basil checked:before:translate-x-5"
-                  />
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </>
-  );
-}
 
 /* ---------- reservations ---------- */
 

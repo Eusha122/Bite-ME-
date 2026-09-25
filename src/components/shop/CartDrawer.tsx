@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useHydrated } from "@/lib/useHydrated";
 import { useCart, computeTotals } from "@/lib/cart";
-import { getItem, formatBDT } from "@/config/menu";
+import { formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
-import { dishImage } from "@/lib/dishImage";
+import { useCatalog } from "../CatalogProvider";
+import DishImage from "../DishImage";
 
 export function QtyStepper({ id, qty }: { id: string; qty: number }) {
   const setQty = useCart((s) => s.setQty);
@@ -27,6 +28,7 @@ export default function CartDrawer() {
   const open = useCart((s) => s.open);
   const setOpen = useCart((s) => s.setOpen);
   const lines = useCart((s) => s.lines);
+  const { dish } = useCatalog();
   const mounted = useHydrated();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -35,7 +37,7 @@ export default function CartDrawer() {
   }, [setOpen]);
 
   if (!mounted) return null;
-  const t = computeTotals(lines);
+  const t = computeTotals(lines, dish);
   const toFree = site.delivery.freeAbove - t.subtotal;
 
   return (
@@ -68,12 +70,11 @@ export default function CartDrawer() {
           <>
             <ul className="flex-1 divide-y divide-line overflow-y-auto px-6">
               {lines.map((l) => {
-                const item = getItem(l.id);
+                const item = dish(l.id);
                 if (!item) return null;
                 return (
                   <li key={l.id} className="flex items-center gap-4 py-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={dishImage(l.id)} alt="" className="h-16 w-16 shrink-0 object-contain" />
+                    <DishImage dish={item} className="h-16 w-16 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{item.name}</div>
                       <div className="text-sm text-ink-2">{formatBDT(item.price * l.qty)}</div>

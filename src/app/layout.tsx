@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { Bagel_Fat_One, Manrope } from "next/font/google";
 import "./globals.css";
 import { site } from "@/config/site";
+import { getCatalog } from "@/lib/db";
+import CatalogProvider from "@/components/CatalogProvider";
 import CartDrawer from "@/components/shop/CartDrawer";
 
 const bagel = Bagel_Fat_One({ variable: "--font-bagel", subsets: ["latin"], weight: "400" });
@@ -20,12 +23,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // the menu is editable, so every request reads it fresh
+  await connection();
+  const catalog = await getCatalog();
   return (
     <html lang="en" className={`${bagel.variable} ${manrope.variable} antialiased`}>
       <body className="min-h-dvh">
-        {children}
-        <CartDrawer />
+        <CatalogProvider initial={catalog}>
+          {children}
+          <CartDrawer />
+        </CatalogProvider>
       </body>
     </html>
   );

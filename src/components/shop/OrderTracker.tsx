@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
-import { dishImage } from "@/lib/dishImage";
+import { useCatalog } from "../CatalogProvider";
+import DishImage from "../DishImage";
 import { flowFor, statusLabel, type Order, type OrderStatus } from "@/lib/types";
 
 type PublicOrder = Pick<Order, "id" | "code" | "createdAt" | "mode" | "status" | "timeline" | "lines" | "totals" | "payment"> & {
@@ -23,17 +24,17 @@ const STAGE_COPY: Partial<Record<OrderStatus, string>> = {
 
 /** A little animated scene for each stage — no WebGL needed. */
 function StageArt({ status, lines }: { status: OrderStatus; lines: PublicOrder["lines"] }) {
-  const hero = lines[0]?.id;
+  const { dish } = useCatalog();
+  const hero = dish(lines[0]?.id ?? "");
   return (
     <div className="relative mx-auto flex aspect-square w-full max-w-[380px] items-center justify-center overflow-hidden">
       {hero && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={dishImage(hero)}
-          alt=""
-          className={`relative z-10 w-[78%] drop-shadow-[0_24px_24px_rgba(42,26,16,.25)] ${status === "cooking" ? "animate-[float_1.6s_ease-in-out_infinite]" : "animate-[float_5s_ease-in-out_infinite]"}`}
+        <div
+          className={`relative z-10 w-[78%] ${status === "cooking" ? "animate-[float_1.6s_ease-in-out_infinite]" : "animate-[float_5s_ease-in-out_infinite]"}`}
           style={{ filter: status === "placed" ? "grayscale(.5)" : undefined }}
-        />
+        >
+          <DishImage dish={hero} eager className="aspect-square w-full" />
+        </div>
       )}
       {status === "out" && (
         <div className="absolute bottom-2 left-0 right-0 h-10 overflow-hidden">

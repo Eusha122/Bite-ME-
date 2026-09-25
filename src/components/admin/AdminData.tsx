@@ -2,15 +2,29 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Order, OrderStatus, Reservation } from "@/lib/types";
+import type { Dish } from "@/config/menu";
 import { chime } from "@/lib/chime";
+import { useCatalog } from "../CatalogProvider";
 
 export type OrderPatch = { status?: OrderStatus; cancelReason?: string; staffNote?: string; markPaid?: boolean };
 export type Toast = { id: string; orderId: string; title: string; body: string };
 
+/** What the dish editor sends; the server validates every field again. */
+export type DishDraft = Pick<Dish, "name" | "cuisine" | "line" | "description" | "price" | "prepMinutes" | "image" | "fit" | "tags" | "spicy" | "veg" | "available" | "hidden">;
+export type TagOperation =
+  | { action: "create"; name: string }
+  | { action: "rename"; from: string; to: string }
+  | { action: "delete"; name: string }
+  | { action: "move"; name: string; direction: -1 | 1 }
+  | { action: "assign"; name: string; dishIds: string[] };
+
 type Ctx = {
   orders: Order[];
   reservations: Reservation[];
-  soldOut: string[];
+  /** every dish, including hidden ones, in menu order */
+  dishes: Dish[];
+  /** every tag, including ones no dish uses yet, in the order guests see them */
+  tags: string[];
   loaded: boolean;
   online: boolean;
   lastSync: number;
@@ -20,7 +34,12 @@ type Ctx = {
   dismissToast: (id: string) => void;
   refresh: () => Promise<void>;
   patchOrder: (id: string, patch: OrderPatch) => Promise<string | null>;
-  setDishSoldOut: (id: string, soldOut: boolean) => Promise<void>;
+  /** each menu action returns an error message, or null on success */
+  createDish: (draft: DishDraft) => Promise<string | null>;
+  updateDish: (id: string, patch: Partial<DishDraft>) => Promise<string | null>;
+  deleteDish: (id: string) => Promise<string | null>;
+  tagOperation: (op: TagOperation) => Promise<string | null>;
+  uploadPhoto: (file: File) => Promise<{ url: string; fit: "contain" | "cover" } | { error: string }>;
   decideReservation: (id: string, status: "confirmed" | "declined") => Promise<void>;
 };
 
@@ -39,7 +58,9 @@ const OTHER_EVERY = 20000;
 export default function AdminDataProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [soldOut, setSoldOut] = useState<string[]>([]);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const { refresh: refreshGuestMenu } = useCatalog();
   const [loaded, setLoaded] = useState(false);
   const [online, setOnline] = useState(true);
   const [lastSync, setLastSync] = useState(0);
@@ -91,9 +112,10 @@ export default function AdminDataProvider({ children }: { children: ReactNode })
 
   const loadOther = useCallback(async () => {
     try {
-      const [r, s] = await Promise.all([fetch("/api/reservations", { cache: "no-store" }).then((x) => x.json()), fetch("/api/soldout", { cache: "no-store" }).then((x) => x.json())]);
+      const [r, m] = await Promise.all([fetch("/api/reservations", { cache: "no-store" }).then((x) => x.json()), fetch("/api/menu?all=1", { cache: "no-store" }).then((x) => x.json())]);
       setReservations(r.reservations ?? []);
-      setSoldOut(s.soldOut ?? []);
+      setDishes(m.dishes ?? []);
+      setTags(m.tags ?? []);
     } catch {}
   }, []);
 
@@ -157,9 +179,57 @@ export default function AdminDataProvider({ children }: { children: ReactNode })
     return null;
   }, [orders]);
 
-  const setDishSoldOut = useCallback(async (id: string, value: boolean) => {
-    setSoldOut((s) => (value ? [...s, id] : s.filter((x) => x !== id)));
-    await fetch("/api/soldout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, soldOut: value }) });
+  /** Send a menu change; on success the guest menu is refreshed too. Returns an error message or null. */
+  const menuRequest = useCallback(
+    async (url: string, method: string, body?: unknown): Promise<{ error: string } | { json: unknown }> => {
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: (json.error as string) ?? "Something went wrong." };
+      await loadOther();
+      void refreshGuestMenu();
+      return { json };
+    },
+    [loadOther, refreshGuestMenu],
+  );
+
+  const createDish = useCallback(
+    async (draft: DishDraft) => {
+      const r = await menuRequest("/api/menu/dishes", "POST", draft);
+      return "error" in r ? r.error : null;
+    },
+    [menuRequest],
+  );
+
+  const updateDish = useCallback(
+    async (id: string, patch: Partial<DishDraft>) => {
+      // toggles feel instant; the server's answer replaces this if it disagrees
+      setDishes((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+      const r = await menuRequest(`/api/menu/dishes/${id}`, "PATCH", patch);
+      if ("error" in r) {
+        await loadOther();
+        return r.error;
+      }
+      return null;
+    },
+    [menuRequest, loadOther],
+  );
+
+  const deleteDish = useCallback(async (id: string) => {
+    const r = await menuRequest(`/api/menu/dishes/${id}`, "DELETE");
+    return "error" in r ? r.error : null;
+  }, [menuRequest]);
+
+  const tagOperation = useCallback(async (op: TagOperation) => {
+    const r = await menuRequest("/api/menu/tags", "POST", op);
+    return "error" in r ? r.error : null;
+  }, [menuRequest]);
+
+  const uploadPhoto = useCallback(async (file: File) => {
+    const form = new FormData();
+    form.set("file", file);
+    const res = await fetch("/api/uploads", { method: "POST", body: form });
+    const json = await res.json().catch(() => ({}));
+    return res.ok ? (json as { url: string; fit: "contain" | "cover" }) : { error: (json.error as string) ?? "Upload failed." };
   }, []);
 
   const decideReservation = useCallback(async (id: string, status: "confirmed" | "declined") => {
@@ -168,8 +238,8 @@ export default function AdminDataProvider({ children }: { children: ReactNode })
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ orders, reservations, soldOut, loaded, online, lastSync, sound, setSound, toasts, dismissToast, refresh, patchOrder, setDishSoldOut, decideReservation }),
-    [orders, reservations, soldOut, loaded, online, lastSync, sound, setSound, toasts, dismissToast, refresh, patchOrder, setDishSoldOut, decideReservation],
+    () => ({ orders, reservations, dishes, tags, loaded, online, lastSync, sound, setSound, toasts, dismissToast, refresh, patchOrder, createDish, updateDish, deleteDish, tagOperation, uploadPhoto, decideReservation }),
+    [orders, reservations, dishes, tags, loaded, online, lastSync, sound, setSound, toasts, dismissToast, refresh, patchOrder, createDish, updateDish, deleteDish, tagOperation, uploadPhoto, decideReservation],
   );
 
   return <AdminCtx.Provider value={value}>{children}</AdminCtx.Provider>;

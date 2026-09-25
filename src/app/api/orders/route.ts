@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createOrder, getSoldOut, listOrders, newId } from "@/lib/db";
+import { createOrder, getDish, listOrders, newId } from "@/lib/db";
 import { isStaff } from "@/lib/staff";
-import { getItem } from "@/config/menu";
 import { site } from "@/config/site";
 import type { Order, OrderMode, PaymentMethod } from "@/lib/types";
 
@@ -44,14 +43,14 @@ export async function POST(req: NextRequest) {
   if (mode === "delivery" && (!address || address.length < 6)) return NextResponse.json({ error: "We need a delivery address." }, { status: 400 });
   if (mode === "dinein" && !table) return NextResponse.json({ error: "Which table are you at?" }, { status: 400 });
 
-  // Never trust client prices — rebuild every line from the menu
-  const soldOut = await getSoldOut();
+  // Never trust client prices — rebuild every line from the live menu. Each line keeps a
+  // copy of the name and price, so later menu edits never change a past order.
   const lines: Order["lines"] = [];
   for (const l of body.lines ?? []) {
-    const item = getItem(l.id);
+    const item = await getDish(String(l.id));
     const qty = Math.floor(Number(l.qty));
-    if (!item || !Number.isFinite(qty) || qty < 1 || qty > 50) continue;
-    if (soldOut.includes(item.id)) return NextResponse.json({ error: `${item.name} just sold out — please remove it.` }, { status: 409 });
+    if (!item || item.hidden || !Number.isFinite(qty) || qty < 1 || qty > 50) continue;
+    if (!item.available) return NextResponse.json({ error: `${item.name} just sold out — please remove it.` }, { status: 409 });
     lines.push({ id: item.id, name: item.name, price: item.price, qty, cuisine: item.cuisine });
   }
   if (!lines.length) return NextResponse.json({ error: "Your tray is empty." }, { status: 400 });

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getItem } from "@/config/menu";
+import type { Dish } from "@/config/menu";
 import { site } from "@/config/site";
 
 export type CartLine = { id: string; qty: number; note?: string };
@@ -56,11 +56,12 @@ export type Totals = {
   count: number;
 };
 
-export function computeTotals(lines: CartLine[], mode: "delivery" | "pickup" | "dinein" = "delivery"): Totals {
+/** `dish` looks a menu item up by id — lines for dishes that left the menu are ignored. */
+export function computeTotals(lines: CartLine[], dish: (id: string) => Pick<Dish, "price"> | undefined, mode: "delivery" | "pickup" | "dinein" = "delivery"): Totals {
   let subtotal = 0;
   let count = 0;
   for (const l of lines) {
-    const item = getItem(l.id);
+    const item = dish(l.id);
     if (!item) continue;
     subtotal += item.price * l.qty;
     count += l.qty;

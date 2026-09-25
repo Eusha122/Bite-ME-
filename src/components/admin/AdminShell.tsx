@@ -17,6 +17,7 @@ const NAV = [
   { href: "/admin/orders", label: "Orders", icon: "M4 6h16M4 12h16M4 18h10" },
   { href: "/admin", label: "Overview", icon: "M4 20V10m6 10V4m6 16v-7m4 7H2" },
   { href: "/admin/menu", label: "Menu", icon: "M6 3v18M6 8h4a4 4 0 0 0 0-8M18 3v18m-3-18v7a3 3 0 0 0 6 0V3" },
+  { href: "/admin/tags", label: "Tags", icon: "M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9zM7.5 7.5h.01" },
   { href: "/admin/reservations", label: "Reservations", icon: "M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" },
   { href: "/admin/tables", label: "Table QR codes", icon: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z" },
 ];

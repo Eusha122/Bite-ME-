@@ -1,18 +1,29 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import MenuPage from "@/components/film/MenuPage";
-import { film } from "@/lib/films";
+import { Suspense } from "react";
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
+import MenuCatalog from "@/components/menu/MenuCatalog";
 import { site } from "@/config/site";
 
 export const metadata: Metadata = {
   title: `Menu — ${site.name}`,
-  description: "Ten dishes from six kitchens — order online for delivery, pickup or at your table in Banani, Dhaka.",
+  description: `Every dish at ${site.name} — Deshi, Japanese, Indian, Italian, Chinese and burgers. Search, filter and order for delivery, pickup or at your table in Banani, Dhaka.`,
 };
 
-export default async function Page({ searchParams }: PageProps<"/menu">) {
+export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
   const sp = await searchParams;
+  // the QR code on a table opens /menu?table=7
   const table = typeof sp.table === "string" ? sp.table.slice(0, 10) : undefined;
-  const spin = await film("table");
-  if (!spin) redirect("/");
-  return <MenuPage meta={spin} table={table} />;
+  return (
+    <>
+      <Nav />
+      <main>
+        {/* MenuCatalog reads ?tag= and ?dish= from the URL */}
+        <Suspense>
+          <MenuCatalog table={table} />
+        </Suspense>
+      </main>
+      <Footer />
+    </>
+  );
 }
