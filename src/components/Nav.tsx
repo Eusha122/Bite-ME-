@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart, computeTotals } from "@/lib/cart";
 import { useHydrated } from "@/lib/useHydrated";
-import { scrollToId } from "./film/SmoothScroll";
+import { site } from "@/config/site";
+import { lenis, scrollToId } from "./film/SmoothScroll";
 
 export function Logo({ className = "h-9 md:h-11" }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src="/brand/logo.webp" alt="BiteME" className={`w-auto ${className}`} width={1200} height={334} />;
 }
 
-export function CartButton() {
+export function CartButton({ className = "h-12 w-12" }: { className?: string }) {
   const lines = useCart((s) => s.lines);
   const pulse = useCart((s) => s.pulse);
   const setOpen = useCart((s) => s.setOpen);
@@ -23,7 +25,7 @@ export function CartButton() {
       key={pulse}
       onClick={() => setOpen(true)}
       aria-label={`Cart, ${count} items`}
-      className={`relative grid h-12 w-12 place-items-center rounded-full bg-ink text-page ${pulse ? "animate-[bump_.5s_cubic-bezier(.3,1.6,.5,1)]" : ""}`}
+      className={`relative grid shrink-0 place-items-center rounded-full bg-ink text-page ${className} ${pulse ? "animate-[bump_.5s_cubic-bezier(.3,1.6,.5,1)]" : ""}`}
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M5 8h14l-1.3 11.1a2 2 0 0 1-2 1.9H8.3a2 2 0 0 1-2-1.9z" />
@@ -36,29 +38,194 @@ export function CartButton() {
   );
 }
 
-export function OrderNow({ className = "" }: { className?: string }) {
+/** "Menu" and "Order now" both lead to the rotating table: scroll there on the home page, open /menu elsewhere. */
+function useGoToMenu() {
   const router = useRouter();
   const path = usePathname();
+  return () => (path === "/" ? scrollToId("menu") : router.push("/menu"));
+}
+
+export function OrderNow({ className = "h-12 px-6" }: { className?: string }) {
+  const go = useGoToMenu();
   return (
     <button
-      onClick={() => (path === "/" ? scrollToId("menu") : router.push("/#menu"))}
-      className={`h-12 rounded-full bg-tomato px-6 font-extrabold text-page shadow-[0_4px_0_var(--tomato-deep)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--tomato-deep)] ${className}`}
+      onClick={go}
+      className={`shrink-0 rounded-full bg-tomato font-extrabold text-page shadow-[0_4px_0_var(--tomato-deep)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--tomato-deep)] ${className}`}
     >
       Order now
     </button>
   );
 }
 
-export default function Nav() {
+const LINKS = [
+  { id: "menu", label: "Menu", href: "/menu" },
+  { id: "reserve", label: "Reserve", href: "/reserve" },
+  { id: "support", label: "Support", href: "/support" },
+] as const;
+
+/**
+ * Hides while the guest scrolls down (the film gets the whole screen) and returns the
+ * moment they scroll up. Always visible near the top of the page and while the phone
+ * menu is open.
+ */
+function useHideOnScroll(locked: boolean) {
+  const [hidden, setHidden] = useState(false);
+  const [atTop, setAtTop] = useState(true);
+  const last = useRef(0);
+
+  useEffect(() => {
+    last.current = window.scrollY;
+    // smooth scrolling moves only 1–2 px per frame, so travel is summed per direction
+    let travel = 0;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const dy = y - last.current;
+      last.current = y;
+      setAtTop(y < 24);
+      if (locked || y < 96) {
+        travel = 0;
+        return setHidden(false);
+      }
+      travel = Math.sign(dy) === Math.sign(travel) ? travel + dy : dy;
+      if (travel < -3) setHidden(false);
+      else if (travel > 12) setHidden(true);
+    };
+    // the intent to go up is known before the page moves: react to the gesture itself
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) setHidden(false);
+    };
+    let touchY = 0;
+    const onTouchStart = (e: TouchEvent) => (touchY = e.touches[0].clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0].clientY - touchY > 8) setHidden(false); // finger moving down = page going up
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (["ArrowUp", "PageUp", "Home"].includes(e.key)) setHidden(false);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true, capture: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onWheel, { capture: true });
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [locked]);
+
+  return { hidden: hidden && !locked, atTop };
+}
+
+function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const goMenu = useGoToMenu();
+  const path = usePathname();
+
+  useEffect(() => {
+    if (!open) return;
+    lenis()?.stop();
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", k);
+    return () => {
+      lenis()?.start();
+      window.removeEventListener("keydown", k);
+    };
+  }, [open, onClose]);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] md:px-[5vw] md:pt-6">
-      <Link href="/" aria-label="BiteME home">
-        <Logo />
-      </Link>
-      <div className="flex items-center gap-3">
-        <OrderNow />
-        <CartButton />
+    <div
+      id="site-menu"
+      className={`fixed inset-0 z-30 flex flex-col bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-28 transition-[opacity,transform] duration-300 md:hidden ${open ? "opacity-100" : "pointer-events-none -translate-y-4 opacity-0"}`}
+      aria-hidden={!open}
+    >
+      <nav aria-label="Site" className="flex flex-col gap-2">
+        {LINKS.map((l, i) => {
+          const on = path === l.href;
+          const cls = `puff text-left text-step-7 ${on ? "puff-tomato" : "puff-ink"}`;
+          const style = { transitionDelay: open ? `${80 + i * 60}ms` : "0ms" };
+          return l.id === "menu" ? (
+            <button key={l.id} style={style} className={`${cls} transition-transform duration-500 ${open ? "translate-y-0" : "translate-y-6"}`} onClick={() => (onClose(), goMenu())}>
+              {l.label}
+            </button>
+          ) : (
+            <Link key={l.id} href={l.href} onClick={onClose} style={style} className={`${cls} transition-transform duration-500 ${open ? "translate-y-0" : "translate-y-6"}`}>
+              {l.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mt-auto flex flex-col gap-4">
+        <OrderNow className="h-14 w-full text-step-1" />
+        <div className="flex flex-col gap-1 text-sm font-bold text-ink-2">
+          <a href={`tel:${site.phone.replace(/\s/g, "")}`}>{site.phone}</a>
+          <span>{site.address}</span>
+        </div>
       </div>
-    </header>
+    </div>
+  );
+}
+
+export default function Nav() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const { hidden, atTop } = useHideOnScroll(menuOpen);
+  const goMenu = useGoToMenu();
+  const path = usePathname();
+
+  // close the phone menu when the route changes
+  const [lastPath, setLastPath] = useState(path);
+  if (path !== lastPath) {
+    setLastPath(path);
+    setMenuOpen(false);
+  }
+
+  const linkCls = (href: string) => `relative py-2 text-step-0 font-extrabold ${path === href ? "text-tomato" : "text-ink"}`;
+
+  return (
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-40 transition-[transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${hidden ? "-translate-y-full" : "translate-y-0"} ${
+          atTop || menuOpen ? "bg-transparent" : "bg-paper shadow-[0_1px_0_var(--line)]"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-[max(0.875rem,env(safe-area-inset-top))] md:px-[5vw] md:pb-4 md:pt-5">
+          <Link href="/" aria-label="BiteME home" className="shrink-0">
+            <Logo className="h-8 md:h-11" />
+          </Link>
+
+          <nav aria-label="Site" className="hidden items-center gap-9 md:flex">
+            <button onClick={goMenu} className={linkCls("/menu")}>
+              Menu
+            </button>
+            <Link href="/reserve" className={linkCls("/reserve")} aria-current={path === "/reserve" ? "page" : undefined}>
+              Reserve
+            </Link>
+            <Link href="/support" className={linkCls("/support")} aria-current={path === "/support" ? "page" : undefined}>
+              Support
+            </Link>
+          </nav>
+
+          <div className="flex items-center gap-2 md:gap-3">
+            <OrderNow className="h-11 px-4 text-sm md:h-12 md:px-6 md:text-base" />
+            <CartButton className="h-11 w-11 md:h-12 md:w-12" />
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-controls="site-menu"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-ink md:hidden"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+                {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 8h16M4 16h16" />}
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+      <MobileMenu open={menuOpen} onClose={closeMenu} />
+    </>
   );
 }

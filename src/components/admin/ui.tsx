@@ -39,7 +39,8 @@ export const isActive = (o: Order) => ACTIVE.includes(o.status);
 export const where = (o: Order) => (o.mode === "dinein" ? `Table ${o.customer.table}` : o.mode === "pickup" ? "Pickup" : "Delivery");
 export const itemsSummary = (o: Order) => o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ");
 export const itemCount = (o: Order) => o.lines.reduce((s, l) => s + l.qty, 0);
-export const minutesOpen = (o: Order, now: number) => Math.floor((now - o.createdAt) / 60000);
+// clamped: an order can arrive between two ticks of the panel's clock
+export const minutesOpen = (o: Order, now: number) => Math.max(0, Math.floor((now - o.createdAt) / 60000));
 
 /** Service-time health for an active order: fine < 20 min, slow < 35, late beyond. */
 export function lateness(o: Order, now: number): "ok" | "slow" | "late" {

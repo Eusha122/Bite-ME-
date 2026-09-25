@@ -1,6 +1,6 @@
 /**
- * Everything client-specific lives here + menu.ts + chapters.ts.
- * To re-skin for a new restaurant, edit these three files and swap /public assets.
+ * Everything client-specific lives here + menu.ts (+ story copy in components/film/Home.tsx).
+ * To re-skin for a new restaurant, edit these and swap /public assets.
  */
 export const site = {
   name: "BiteME",
@@ -11,6 +11,10 @@ export const site = {
   address: "House 42, Road 11, Banani, Dhaka 1213",
   phone: "+880 1700-000000",
   whatsapp: "8801700000000",
+  email: "hello@biteme.bd",
+  deliveryAreas: ["Banani", "Gulshan 1 & 2", "Baridhara", "Niketan", "Mohakhali DOHS"],
+  /** time slots offered on the reservation page */
+  reservationSlots: ["12:30", "13:30", "14:30", "18:00", "19:00", "20:00", "21:00", "22:00"],
   hours: [
     { days: "Sat – Thu", time: "12:00 PM – 11:30 PM" },
     { days: "Friday", time: "2:30 PM – 12:00 AM" },

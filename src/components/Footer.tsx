@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { site } from "@/config/site";
 import { WaveEdge } from "./Wave";
 
@@ -9,6 +10,11 @@ export default function Footer() {
         <h2 className="puff puff-paper text-step-7 md:text-step-8">
           Hungry yet?
         </h2>
+        <nav aria-label="Footer" className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-step-2 font-extrabold">
+          <Link href="/menu">Menu</Link>
+          <Link href="/reserve">Reserve a table</Link>
+          <Link href="/support">Support</Link>
+        </nav>
         <div className="mt-12 grid gap-10 text-step-0 font-bold md:grid-cols-3">
           <div>
             <p className="mb-2 text-step--1 font-extrabold uppercase tracking-[0.18em] text-mustard">Find us</p>

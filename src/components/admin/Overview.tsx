@@ -14,7 +14,7 @@ function Tile({ label, value, sub, tone }: { label: string; value: string; sub?:
   return (
     <div className={`rounded-3xl border p-5 ${tone === "alert" ? "border-tomato bg-tomato/5" : "border-line bg-page"}`}>
       <div className="text-xs font-extrabold uppercase tracking-[0.16em] text-ink-2">{label}</div>
-      <div className={`puff mt-3 text-step-5 tabular-nums ${tone === "alert" ? "puff-tomato" : "puff-ink"}`}>{value}</div>
+      <div className={`puff mt-3 whitespace-nowrap text-step-4 tabular-nums ${tone === "alert" ? "puff-tomato" : "puff-ink"}`}>{value}</div>
       {sub && <div className="mt-1 text-xs font-semibold text-ink-2">{sub}</div>}
     </div>
   );
