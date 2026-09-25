@@ -51,6 +51,7 @@ export const chapters: Chapter[] = [
     id: "tokyo",
     world: "tokyo",
     hero: "tonkotsu-ramen",
+    heroModel: "/models/tonkotsu-ramen.glb",
     cuisine: "japanese",
     kicker: "Chapter 01 — Tokyo",
     bn: "নীরবতার নিখুঁততা",
