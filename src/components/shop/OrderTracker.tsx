@@ -96,7 +96,12 @@ export default function OrderTracker({ id }: { id: string }) {
         <p className="mt-4 max-w-md text-ink-2">{STAGE_COPY[order.status]}</p>
         {order.status !== "delivered" && order.status !== "cancelled" && <p className="mt-2 text-sm text-ink-2">Estimated: {eta} · this page updates live</p>}
 
-        <ol className="mt-10 flex flex-col">
+        {/* on phones the dish sits above the tracker; on desktop it is in the right column */}
+        <div className="mt-6 md:hidden">
+          <StageArt status={order.status} lines={order.lines} />
+        </div>
+
+        <ol className="mt-8 flex flex-col md:mt-10">
           {flow.map((s, k) => {
             const done = k <= idx;
             const current = k === idx;
@@ -120,7 +125,9 @@ export default function OrderTracker({ id }: { id: string }) {
       </div>
 
       <div className="flex flex-col gap-6">
-        <StageArt status={order.status} lines={order.lines} />
+        <div className="hidden md:block">
+          <StageArt status={order.status} lines={order.lines} />
+        </div>
         <div className="rounded-[28px] border border-line bg-page p-6">
           <ul className="flex flex-col gap-2 text-sm">
             {order.lines.map((l) => (
