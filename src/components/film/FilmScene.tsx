@@ -23,6 +23,10 @@ type Props = {
   film: string;
   frames: number;
   aspect: number;
+  /** width / height of the cropped phone frames */
+  mobileAspect?: number;
+  /** changes when frames are regenerated (cache-busting) */
+  version?: number;
   bg: string;
   beats: Beat[];
   /** scroll length in viewport heights */
@@ -36,7 +40,7 @@ type Props = {
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-export default function FilmScene({ id, film, frames, aspect, bg, beats, length = 320, onReady, side = "left" }: Props) {
+export default function FilmScene({ id, film, frames, aspect, mobileAspect, version = 0, bg, beats, length = 320, onReady, side = "left" }: Props) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -45,10 +49,12 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
     const cv = canvas.current!;
     const ctx = cv.getContext("2d", { alpha: false })!;
     const narrow = window.matchMedia("(max-width: 767px)").matches;
+    // phones load frames that are already cropped to the middle, so their proportions differ
+    const imgAspect = narrow ? (mobileAspect ?? aspect) : aspect;
     let seq: Sequence | null = null;
     const start = () => {
       if (seq) return;
-      seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames);
+      seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames, version);
       seq.onFirst.then(() => {
         dirty = true;
         onReady?.();
@@ -75,15 +81,16 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       const H = cv.height;
       let dw: number, dh: number, dx: number, dy: number;
       if (W / H < 1) {
-        // phones: frame much wider than the screen, dish centred in the upper half
-        dw = W * 1.85;
-        dh = dw / aspect;
+        // phones: the (virtual) full frame is much wider than the screen; the cropped frame we have
+        // is just its middle, so it is drawn at the same scale, centred, with the dish in the upper half
+        dh = (W * 1.85) / aspect;
+        dw = dh * imgAspect;
         dx = (W - dw) / 2;
         dy = H * 0.36 - dh / 2;
       } else {
         // desktop: the dish takes the half opposite the copy
         dh = Math.min(H * 0.86, (W * 0.62) / aspect * 1.6);
-        dw = dh * aspect;
+        dw = dh * imgAspect;
         dx = W * (side === "left" ? 0.68 : 0.32) - dw / 2;
         dy = (H - dh) / 2 + H * 0.03;
       }
@@ -152,7 +159,7 @@ export default function FilmScene({ id, film, frames, aspect, bg, beats, length 
       gsap.ticker.remove(tick);
       ro.disconnect();
     };
-  }, [film, frames, aspect, bg, onReady, side]);
+  }, [film, frames, aspect, mobileAspect, version, bg, onReady, side]);
 
   return (
     <section ref={section} id={id} className="relative" style={{ height: `${length}vh`, background: bg }}>

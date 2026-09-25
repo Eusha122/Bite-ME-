@@ -14,7 +14,7 @@ import { lenis } from "./SmoothScroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export type FilmMeta = { frames: number; perClip: number; clips: number; aspect: number; bg: string };
+export type FilmMeta = { frames: number; perClip: number; clips: number; aspect: number; mobileAspect?: number; bg: string; version?: number };
 
 /*
  * The rotating table, in STEP mode.
@@ -103,6 +103,7 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     const per = meta.perClip;
 
     let seq: Sequence | null = null;
+    let frameAspect = meta.aspect; // width / height of the frames actually loaded
     const play = { pos: 0 }; // playhead in frames, driven by tweens (time), never by scroll
     let current = 0; // dish the table is resting on / heading to
     let tween: gsap.core.Tween | null = null;
@@ -134,13 +135,14 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
         const H = cv.height;
         let dw: number, dh: number, cx: number, cy: number;
         if (narrow()) {
-          dw = W * 1.7;
-          dh = dw / meta.aspect;
+          // the (virtual) full frame is 1.7 screens wide; phone frames are its cropped middle
+          dh = (W * 1.7) / meta.aspect;
+          dw = dh * frameAspect;
           cx = W * 0.5;
           cy = H * 0.3;
         } else {
           dh = H * 1.02;
-          dw = dh * meta.aspect;
+          dw = dh * frameAspect;
           cx = W * 0.64;
           cy = H * 0.52;
         }
@@ -274,7 +276,10 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
       start: "top 600%",
       once: true,
       onEnter: () => {
-        seq = loadSequence(`/film/table/${narrow() ? "m" : "d"}`, meta.frames);
+        // phones get the cropped, full-detail frames; remember their proportions for drawing
+        const phone = narrow();
+        frameAspect = phone ? (meta.mobileAspect ?? meta.aspect) : meta.aspect;
+        seq = loadSequence(`/film/table/${phone ? "m" : "d"}`, meta.frames, meta.version ?? 0);
         seq.onFirst.then(() => (dirty = true));
       },
     });

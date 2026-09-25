@@ -3,5 +3,7 @@
   "perClip": 120,
   "clips": 1,
   "aspect": 1.7777777777777777,
-  "bg": "#f0e4d2"
+  "mobileAspect": 1.0666666666666667,
+  "bg": "#f0e4d2",
+  "version": 1790346745647
 }

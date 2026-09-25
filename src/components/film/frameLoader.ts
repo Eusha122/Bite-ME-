@@ -61,7 +61,9 @@ function passes(n: number) {
   });
 }
 
-export function loadSequence(base: string, count: number): Sequence {
+/** `version` is appended to every URL so regenerated frames are never served from a stale cache. */
+export function loadSequence(base: string, count: number, version = 0): Sequence {
+  const url = (i: number) => `${base}/${String(i).padStart(3, "0")}.webp?v=${version}`;
   const frames: (HTMLImageElement | null)[] = Array(count).fill(null);
   let resolveFirst!: () => void;
   const onFirst = new Promise<void>((r) => (resolveFirst = r));
@@ -83,7 +85,7 @@ export function loadSequence(base: string, count: number): Sequence {
 
   // frame 0 first, on its own, so the scene can paint immediately
   const first = new Image();
-  first.src = `${base}/000.webp`;
+  first.src = url(0);
   first
     .decode()
     .then(() => {
@@ -95,7 +97,7 @@ export function loadSequence(base: string, count: number): Sequence {
 
   const order = seqCounter++;
   passes(count).forEach((indices, pass) => {
-    for (const index of indices) queue.push({ url: `${base}/${String(index).padStart(3, "0")}.webp`, seq, index, pass, order });
+    for (const index of indices) queue.push({ url: url(index), seq, index, pass, order });
   });
   // coarse passes of every scene before anyone's fine detail; earlier scenes first within a pass
   queue.sort((a, b) => a.pass - b.pass || a.order - b.order || a.index - b.index);

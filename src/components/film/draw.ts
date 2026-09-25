@@ -62,7 +62,8 @@ function featherEdges(ctx: CanvasRenderingContext2D, bg: string, dx: number, dy:
  * needs — drawing a 1440px frame into a 4K backing store just burns fill-rate.
  */
 export function sizeCanvas(cv: HTMLCanvasElement, maxWidth = 2200) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // most phones are 3× — capping at 2× made the browser scale the picture up, and softened it
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const scale = Math.min(dpr, maxWidth / Math.max(1, cv.clientWidth));
   cv.width = Math.round(cv.clientWidth * scale);
   cv.height = Math.round(cv.clientHeight * scale);
