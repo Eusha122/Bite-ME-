@@ -1,75 +1,63 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useCart, computeTotals } from "@/lib/cart";
 import { useHydrated } from "@/lib/useHydrated";
-import { dishImage } from "@/lib/dishImage";
+import { scrollToId } from "./film/SmoothScroll";
 
-export function Logo({ className = "" }: { className?: string }) {
-  return (
-    <span className={`font-display text-2xl font-light tracking-[-0.03em] ${className}`}>
-      Bite<span className="italic text-saffron">ME</span>
-    </span>
-  );
+export function Logo({ className = "h-9 md:h-11" }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brand/logo.webp" alt="BiteME" className={`w-auto ${className}`} width={1200} height={334} />;
 }
 
-/** The cart button is a little serving tray; dishes you add stack on it. */
-export function CartTray() {
+export function CartButton() {
   const lines = useCart((s) => s.lines);
   const pulse = useCart((s) => s.pulse);
   const setOpen = useCart((s) => s.setOpen);
-  const mounted = useHydrated();
-
-  const count = mounted ? computeTotals(lines).count : 0;
-  const stack = mounted ? lines.slice(-3) : [];
-
+  const hydrated = useHydrated();
+  const count = hydrated ? computeTotals(lines).count : 0;
   return (
     <button
       id="cart-tray"
       key={pulse}
       onClick={() => setOpen(true)}
-      aria-label={`Open your tray, ${count} items`}
-      className={`relative flex h-12 items-center gap-2 rounded-full border border-white/15 bg-black/40 pl-2 pr-4 backdrop-blur-md transition hover:border-saffron ${pulse ? "animate-[bump_.5s_cubic-bezier(.3,1.6,.5,1)]" : ""}`}
+      aria-label={`Cart, ${count} items`}
+      className={`relative grid h-12 w-12 place-items-center rounded-full bg-ink text-page ${pulse ? "animate-[bump_.5s_cubic-bezier(.3,1.6,.5,1)]" : ""}`}
     >
-      <span className="relative flex h-9 w-12 items-end justify-center">
-        {stack.map((l, k) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={l.id}
-            src={dishImage(l.id)}
-            alt=""
-            className="absolute bottom-2 h-7 w-7 object-contain drop-shadow"
-            style={{ left: `${6 + k * 11}px`, zIndex: k }}
-          />
-        ))}
-        <svg viewBox="0 0 48 12" className="absolute bottom-0 h-3 w-12 text-saffron" aria-hidden>
-          <path d="M2 3h44l-4 7H6z" fill="currentColor" opacity=".9" />
-        </svg>
-      </span>
-      <span className="text-sm font-semibold tabular-nums">{count}</span>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M5 8h14l-1.3 11.1a2 2 0 0 1-2 1.9H8.3a2 2 0 0 1-2-1.9z" />
+        <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+      </svg>
+      {count > 0 && (
+        <span className="absolute -right-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full bg-mustard px-1.5 text-xs font-extrabold text-ink tabular-nums">{count}</span>
+      )}
     </button>
   );
 }
 
-export default function Nav({ transparent = true }: { transparent?: boolean }) {
+export function OrderNow({ className = "" }: { className?: string }) {
+  const router = useRouter();
+  const path = usePathname();
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3 md:px-10 md:pt-6 ${transparent ? "" : "border-b border-line bg-ink/80 backdrop-blur-xl"}`}
+    <button
+      onClick={() => (path === "/" ? scrollToId("menu") : router.push("/#menu"))}
+      className={`h-12 rounded-full bg-tomato px-6 font-extrabold text-page shadow-[0_4px_0_var(--tomato-deep)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--tomato-deep)] ${className}`}
     >
+      Order now
+    </button>
+  );
+}
+
+export default function Nav() {
+  return (
+    <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] md:px-[5vw] md:pt-6">
       <Link href="/" aria-label="BiteME home">
         <Logo />
       </Link>
-      <nav className="hidden items-center gap-8 text-sm text-cream/80 md:flex">
-        <Link href="/#story" className="transition hover:text-saffron">Story</Link>
-        <Link href="/menu" className="transition hover:text-saffron">Menu</Link>
-        <Link href="/#reserve" className="transition hover:text-saffron">Reserve</Link>
-        <Link href="/#visit" className="transition hover:text-saffron">Visit</Link>
-      </nav>
       <div className="flex items-center gap-3">
-        <Link href="/menu" className="rounded-full bg-cream px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-saffron md:hidden">
-          Menu
-        </Link>
-        <CartTray />
+        <OrderNow />
+        <CartButton />
       </div>
     </header>
   );
