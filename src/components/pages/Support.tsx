@@ -94,7 +94,7 @@ export default function Support() {
           <span className="puff-tomato block">we help?</span>
         </h1>
         <p className="mt-6 max-w-[44ch] text-step-1 font-semibold leading-relaxed text-ink-2">
-          Real people answer every message, {site.hours[0].days.toLowerCase()} {site.hours[0].time.toLowerCase()}.
+          Real people answer every message. We&apos;re here {site.hours[0].days}, {site.hours[0].time}.
         </p>
       </header>
 

@@ -6,25 +6,35 @@
  * scrubbable almost immediately and sharpens in time. The queue is ordered by pass
  * first, so a scene you are approaching gets its coarse frames ahead of another
  * scene's fine detail. Only a few requests run at once.
+ *
+ * Memory matters: every decoded frame costs width × height × 4 bytes and a film is
+ * hundreds of them, so a scene that is far from the screen calls dispose() to let go.
  */
 export type Sequence = {
+  /** physical frames actually stored (phones store every `stride`-th logical frame) */
   frames: (HTMLImageElement | null)[];
+  /** logical frames per stored frame: 1 on desktop, 2 on phones */
+  stride: number;
   loaded: number;
-  /** nearest loaded frame to i */
+  disposed: boolean;
+  /** nearest loaded frame to logical index i */
   nearest: (i: number) => HTMLImageElement | null;
+  /** stop loading and release every decoded frame */
+  dispose: () => void;
   onFirst: Promise<void>;
 };
 
 type Job = { url: string; seq: Sequence; index: number; pass: number; order: number };
 
 const MAX_PARALLEL = 6;
-const queue: Job[] = [];
+let queue: Job[] = [];
 let active = 0;
 let seqCounter = 0;
 
 function pump() {
   while (active < MAX_PARALLEL && queue.length) {
     const job = queue.shift()!;
+    if (job.seq.disposed) continue;
     active++;
     const img = new Image();
     img.decoding = "async";
@@ -32,6 +42,8 @@ function pump() {
     img
       .decode()
       .then(() => {
+        // a scene that was released while this frame was in flight must not keep it
+        if (job.seq.disposed) return;
         job.seq.frames[job.index] = img;
         job.seq.loaded++;
       })
@@ -61,25 +73,39 @@ function passes(n: number) {
   });
 }
 
-/** `version` is appended to every URL so regenerated frames are never served from a stale cache. */
-export function loadSequence(base: string, count: number, version = 0): Sequence {
+/**
+ * @param count   logical frames in the film
+ * @param version appended to every URL so regenerated frames are never served from a stale cache
+ * @param stride  1 = a file for every logical frame; 2 = phones, a file for every second one
+ */
+export function loadSequence(base: string, count: number, version = 0, stride = 1): Sequence {
+  const stored = Math.ceil(count / stride);
   const url = (i: number) => `${base}/${String(i).padStart(3, "0")}.webp?v=${version}`;
-  const frames: (HTMLImageElement | null)[] = Array(count).fill(null);
+  const frames: (HTMLImageElement | null)[] = Array(stored).fill(null);
   let resolveFirst!: () => void;
   const onFirst = new Promise<void>((r) => (resolveFirst = r));
   const seq: Sequence = {
     frames,
+    stride,
     loaded: 0,
+    disposed: false,
     onFirst,
     nearest(i) {
-      if (frames[i]) return frames[i];
-      for (let d = 1; d < count; d++) {
-        const a = frames[i - d];
+      const p = Math.min(stored - 1, Math.max(0, Math.round(i / stride)));
+      if (frames[p]) return frames[p];
+      for (let d = 1; d < stored; d++) {
+        const a = frames[p - d];
         if (a) return a;
-        const b = frames[i + d];
+        const b = frames[p + d];
         if (b) return b;
       }
       return null;
+    },
+    dispose() {
+      seq.disposed = true;
+      queue = queue.filter((j) => j.seq !== seq);
+      frames.fill(null);
+      seq.loaded = 0;
     },
   };
 
@@ -89,6 +115,7 @@ export function loadSequence(base: string, count: number, version = 0): Sequence
   first
     .decode()
     .then(() => {
+      if (seq.disposed) return;
       frames[0] = first;
       seq.loaded++;
     })
@@ -96,7 +123,7 @@ export function loadSequence(base: string, count: number, version = 0): Sequence
     .finally(resolveFirst);
 
   const order = seqCounter++;
-  passes(count).forEach((indices, pass) => {
+  passes(stored).forEach((indices, pass) => {
     for (const index of indices) queue.push({ url: url(index), seq, index, pass, order });
   });
   // coarse passes of every scene before anyone's fine detail; earlier scenes first within a pass

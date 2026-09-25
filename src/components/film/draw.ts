@@ -6,9 +6,11 @@ import type { Sequence } from "./frameLoader";
  * frame to frame. Edges dissolve into the page colour so the frame boundary never shows.
  */
 export function drawFilm(ctx: CanvasRenderingContext2D, seq: Sequence, pos: number, bg: string, dx: number, dy: number, dw: number, dh: number) {
-  const i0 = Math.floor(pos);
-  const t = pos - i0;
-  const a = seq.nearest(i0);
+  // `pos` counts logical frames; phones store every stride-th one, so step in stored frames
+  const p = pos / seq.stride;
+  const i0 = Math.floor(p);
+  const t = p - i0;
+  const a = seq.nearest(i0 * seq.stride);
   if (!a) return false;
   // only blend when the exact next frame is in memory (never blend towards a stand-in)
   const b = t > 0.02 ? seq.frames[i0 + 1] : null;
@@ -62,8 +64,8 @@ function featherEdges(ctx: CanvasRenderingContext2D, bg: string, dx: number, dy:
  * needs — drawing a 1440px frame into a 4K backing store just burns fill-rate.
  */
 export function sizeCanvas(cv: HTMLCanvasElement, maxWidth = 2200) {
-  // most phones are 3× — capping at 2× made the browser scale the picture up, and softened it
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // 2× keeps phones sharp without making the GPU paint 9 pixels for every CSS pixel (3×), which is what hangs them
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const scale = Math.min(dpr, maxWidth / Math.max(1, cv.clientWidth));
   cv.width = Math.round(cv.clientWidth * scale);
   cv.height = Math.round(cv.clientHeight * scale);

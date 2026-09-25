@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart, computeTotals } from "@/lib/cart";
 import { useHydrated } from "@/lib/useHydrated";
 import { site } from "@/config/site";
 import { useCatalog } from "./CatalogProvider";
-import { lenis, scrollToId } from "./film/SmoothScroll";
+import { lenis } from "./film/SmoothScroll";
+import AccountMenu from "./account/AccountMenu";
 
 export function Logo({ className = "h-9 md:h-11" }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
@@ -36,25 +37,6 @@ export function CartButton({ className = "h-12 w-12" }: { className?: string }) 
       {count > 0 && (
         <span className="absolute -right-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full bg-mustard px-1.5 text-xs font-extrabold text-ink tabular-nums">{count}</span>
       )}
-    </button>
-  );
-}
-
-/** "Menu" and "Order now" both lead to the rotating table: scroll there on the home page, open /menu elsewhere. */
-function useGoToMenu() {
-  const router = useRouter();
-  const path = usePathname();
-  return () => (path === "/" ? scrollToId("menu") : router.push("/menu"));
-}
-
-export function OrderNow({ className = "h-12 px-6" }: { className?: string }) {
-  const go = useGoToMenu();
-  return (
-    <button
-      onClick={go}
-      className={`shrink-0 rounded-full bg-tomato font-extrabold text-page shadow-[0_4px_0_var(--tomato-deep)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--tomato-deep)] ${className}`}
-    >
-      Order now
     </button>
   );
 }
@@ -155,7 +137,6 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
         })}
       </nav>
       <div className="mt-auto flex flex-col gap-4">
-        <OrderNow className="h-14 w-full text-step-1" />
         <div className="flex flex-col gap-1 text-sm font-bold text-ink-2">
           <a href={`tel:${site.phone.replace(/\s/g, "")}`}>{site.phone}</a>
           <span>{site.address}</span>
@@ -220,8 +201,7 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {/* the open phone menu has its own big Order now */}
-            <OrderNow className={`h-11 px-4 text-sm md:h-12 md:px-6 md:text-base ${menuOpen ? "invisible md:visible" : ""}`} />
+            <AccountMenu />
             <CartButton className="h-11 w-11 md:h-12 md:w-12" />
             <button
               onClick={() => setMenuOpen((o) => !o)}

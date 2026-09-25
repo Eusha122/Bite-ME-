@@ -90,38 +90,39 @@ html.lenis body {
   letter-spacing: -0.01em;
   line-height: 0.95;
 }
+/* the shadow depth is in em, so it scales with the headline: big titles keep their volume, small ones stay legible */
 .puff-tomato {
   color: var(--tomato);
   text-shadow:
-    0 1px 0 var(--tomato-deep),
-    0 2px 0 var(--tomato-deep),
-    0 3px 0 var(--tomato-deep),
-    0 4px 0 #a52a18,
-    0 5px 0 #a52a18;
+    0 0.013em 0 var(--tomato-deep),
+    0 0.026em 0 var(--tomato-deep),
+    0 0.039em 0 var(--tomato-deep),
+    0 0.052em 0 #a52a18,
+    0 0.065em 0 #a52a18;
 }
 .puff-mustard {
   color: var(--mustard);
   text-shadow:
-    0 1px 0 var(--mustard-deep),
-    0 2px 0 var(--mustard-deep),
-    0 3px 0 var(--mustard-deep),
-    0 4px 0 #b37a04,
-    0 5px 0 #b37a04;
+    0 0.013em 0 var(--mustard-deep),
+    0 0.026em 0 var(--mustard-deep),
+    0 0.039em 0 var(--mustard-deep),
+    0 0.052em 0 #b37a04,
+    0 0.065em 0 #b37a04;
 }
 .puff-ink {
   color: var(--ink);
   text-shadow:
-    0 1px 0 #120a05,
-    0 2px 0 #120a05,
-    0 3px 0 #120a05;
+    0 0.013em 0 #120a05,
+    0 0.026em 0 #120a05,
+    0 0.039em 0 #120a05;
 }
 .puff-paper {
   color: var(--page);
   text-shadow:
-    0 1px 0 #d9c7ab,
-    0 2px 0 #d9c7ab,
-    0 3px 0 #cbb693,
-    0 4px 0 #cbb693;
+    0 0.013em 0 #d9c7ab,
+    0 0.026em 0 #d9c7ab,
+    0 0.039em 0 #cbb693,
+    0 0.052em 0 #cbb693;
 }
 
 @keyframes marquee {

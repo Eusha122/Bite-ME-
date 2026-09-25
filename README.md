@@ -8,6 +8,13 @@ A cinematic, scroll-driven restaurant site with real online ordering. Every visu
 - **Ordering** — cart, checkout (delivery / pickup / dine-in QR), bKash · Nagad · card · cash (demo gateway), live order tracking.
 - **Staff** — `/kitchen` live kitchen display with chime; `/admin` order management, sales overview, **menu manager** (add/edit dishes, upload photos, sold-out and hide switches), **tag manager**, reservations, printable table QR codes. Demo PIN `1234`. There is deliberately no link to it on the public site — staff type `/admin` (or `/kitchen`) into the address bar.
 
+## Legal, account and branding
+
+- **Legal pages** (`/legal/terms`, `privacy`, `refunds`, `allergens`, `delivery`) are generated from `src/config/legal.ts` using the details in `site.legal` (company name, trade licence, VAT BIN, grievance email). Those are **placeholders** — replace them, and have a lawyer review the copy, before any restaurant goes live.
+- **Demo login** — the person icon in the nav. Name + Bangladeshi mobile number, no password; kept in the browser (`src/lib/account.ts`) to pre-fill checkout and list the guest's orders at `/account`. Swap for phone-number OTP and a server session in production.
+- **Payment logos** live in `public/brand/pay/` (bKash, Nagad, Visa) and are used in the footer, checkout and dish sheet via `src/components/PayLogos.tsx`.
+- **Favicon** — `src/app/icon.png` and `apple-icon.png` (the puffy "B"). Replace both for a new client.
+
 ## Menu and tags
 
 The menu lives in the database (`.data/db.json`), seeded on first run from `src/config/menu.ts` (40 dishes). After that the admin panel owns it:

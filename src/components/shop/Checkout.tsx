@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { useCart, computeTotals } from "@/lib/cart";
 import { formatBDT } from "@/config/menu";
 import { site } from "@/config/site";
+import { useAccount } from "@/lib/account";
 import { useCatalog } from "../CatalogProvider";
+import { PayLogo, PAY_LOGO } from "../PayLogos";
 import DishImage from "../DishImage";
 import type { OrderMode, PaymentMethod } from "@/lib/types";
 import { QtyStepper } from "./CartDrawer";
@@ -18,11 +20,11 @@ const MODES: { id: OrderMode; label: string; sub: string }[] = [
   { id: "dinein", label: "Dine-in", sub: "At your table" },
 ];
 
-const PAYMENTS: { id: PaymentMethod; label: string; sub: string; color: string }[] = [
-  { id: "bkash", label: "bKash", sub: "Mobile wallet", color: "#e2136e" },
-  { id: "nagad", label: "Nagad", sub: "Mobile wallet", color: "#f7941d" },
-  { id: "card", label: "Card", sub: "Visa · Mastercard · Amex", color: "#7c8cff" },
-  { id: "cod", label: "Cash", sub: "Pay on delivery / at table", color: "#6fd3b8" },
+const PAYMENTS: { id: PaymentMethod; label: string; sub: string }[] = [
+  { id: "bkash", label: "bKash", sub: "Mobile wallet" },
+  { id: "nagad", label: "Nagad", sub: "Mobile wallet" },
+  { id: "card", label: "Card", sub: "Visa and other cards" },
+  { id: "cod", label: "Cash", sub: "On delivery or at your table" },
 ];
 
 export default function Checkout() {
@@ -30,6 +32,8 @@ export default function Checkout() {
   const lines = useCart((s) => s.lines);
   const clear = useCart((s) => s.clear);
   const { dish } = useCatalog();
+  const user = useAccount((s) => s.user);
+  const addOrder = useAccount((s) => s.addOrder);
   const mounted = useHydrated();
   // a QR scan at a table stores its number for the session
   const [table, setTable] = useState(() => (typeof window === "undefined" ? "" : (sessionStorage.getItem("biteme-table") ?? "")));
@@ -79,6 +83,7 @@ export default function Checkout() {
       return;
     }
     clear();
+    if (user) addOrder(json.id); // logged-in guests find this order again under "My orders"
     router.push(`/order/${json.id}?new=1`);
   };
 
@@ -123,11 +128,11 @@ export default function Checkout() {
           <legend className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-ink-2">2 · Your details</legend>
           <label className="flex flex-col gap-1.5 text-xs text-ink-2">
             Name
-            <input name="name" required minLength={2} autoComplete="name" className={input} />
+            <input name="name" required minLength={2} autoComplete="name" defaultValue={user?.name} className={input} />
           </label>
           <label className="flex flex-col gap-1.5 text-xs text-ink-2">
             Mobile number
-            <input name="phone" required inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" pattern="^(\+?88)?01[3-9][0-9]{8}$" className={input} />
+            <input name="phone" required inputMode="tel" autoComplete="tel" defaultValue={user?.phone} placeholder="01XXXXXXXXX" pattern="^(\+?88)?01[3-9][0-9]{8}$" className={input} />
           </label>
           {mode === "delivery" && (
             <label className="flex flex-col gap-1.5 text-xs text-ink-2 md:col-span-2">
@@ -163,12 +168,23 @@ export default function Checkout() {
                 type="button"
                 key={p.id}
                 onClick={() => setPayment(p.id)}
-                style={{ ["--pc" as string]: p.color }}
-                className={`relative overflow-hidden rounded-2xl border p-4 text-left transition ${payment === p.id ? "border-[var(--pc)] bg-[color-mix(in_srgb,var(--pc)_12%,transparent)]" : "border-line"}`}
+                aria-pressed={payment === p.id}
+                aria-label={`${p.label} — ${p.sub}`}
+                className={`relative flex h-24 flex-col items-center justify-center rounded-2xl border-2 bg-page px-3 text-center ${payment === p.id ? "border-ink" : "border-line"}`}
               >
-                <span className="mb-3 block h-2 w-8 rounded-full" style={{ background: p.color }} />
-                <div className="font-semibold">{p.label}</div>
-                <div className="text-[11px] text-ink-2">{p.sub}</div>
+                {PAY_LOGO[p.id] ? (
+                  <PayLogo method={p.id} className="h-10 max-w-[80%]" />
+                ) : (
+                  <>
+                    <span className="text-step-1 font-extrabold">{p.label}</span>
+                    <span className="mt-0.5 text-[11px] font-bold leading-tight text-ink-2">{p.sub}</span>
+                  </>
+                )}
+                {payment === p.id && (
+                  <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-ink text-[11px] text-page" aria-hidden>
+                    ✓
+                  </span>
+                )}
               </button>
             ))}
           </div>

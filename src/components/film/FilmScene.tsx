@@ -25,6 +25,8 @@ type Props = {
   aspect: number;
   /** width / height of the cropped phone frames */
   mobileAspect?: number;
+  /** phones store every n-th frame (memory) */
+  mobileStride?: number;
   /** changes when frames are regenerated (cache-busting) */
   version?: number;
   bg: string;
@@ -40,7 +42,7 @@ type Props = {
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-export default function FilmScene({ id, film, frames, aspect, mobileAspect, version = 0, bg, beats, length = 320, onReady, side = "left" }: Props) {
+export default function FilmScene({ id, film, frames, aspect, mobileAspect, mobileStride = 1, version = 0, bg, beats, length = 320, onReady, side = "left" }: Props) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -54,11 +56,18 @@ export default function FilmScene({ id, film, frames, aspect, mobileAspect, vers
     let seq: Sequence | null = null;
     const start = () => {
       if (seq) return;
-      seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames, version);
+      drawnLoaded = -1;
+      dirty = true;
+      seq = loadSequence(`/film/${film}/${narrow ? "m" : "d"}`, frames, version, narrow ? mobileStride : 1);
       seq.onFirst.then(() => {
         dirty = true;
         onReady?.();
       });
+    };
+    // a scene far from the screen lets go of its decoded frames, so memory stays bounded
+    const release = () => {
+      seq?.dispose();
+      seq = null;
     };
     // target = where the scrollbar is; shown = the eased playhead we actually render
     let progress = 0;
@@ -131,7 +140,8 @@ export default function FilmScene({ id, film, frames, aspect, mobileAspect, vers
 
     resize();
     // the hero loads straight away; later scenes start downloading ~2 screens before they arrive
-    const warm = ScrollTrigger.create({ trigger: section.current, start: "top 300%", once: true, onEnter: start });
+    // active from ~3 screens before the scene until ~2 screens after it
+    const warm = ScrollTrigger.create({ trigger: section.current, start: "top 300%", end: "bottom -200%", onEnter: start, onEnterBack: start, onLeave: release, onLeaveBack: release });
     if (onReady) start();
 
     const st = ScrollTrigger.create({
@@ -156,10 +166,11 @@ export default function FilmScene({ id, film, frames, aspect, mobileAspect, vers
     return () => {
       st.kill();
       warm.kill();
+      release();
       gsap.ticker.remove(tick);
       ro.disconnect();
     };
-  }, [film, frames, aspect, mobileAspect, version, bg, onReady, side]);
+  }, [film, frames, aspect, mobileAspect, mobileStride, version, bg, onReady, side]);
 
   return (
     <section ref={section} id={id} className="relative" style={{ height: `${length}vh`, background: bg }}>

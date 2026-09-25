@@ -10,6 +10,8 @@ export type FilmInfo = {
   aspect: number;
   /** width / height of a phone frame (the cropped middle of the desktop one) */
   mobileAspect: number;
+  /** phones get every n-th frame (keeps memory small); the page cross-fades between them */
+  mobileStride: number;
   bg: string;
   /** changes whenever the frames are regenerated, so browsers never reuse stale ones */
   version: number;

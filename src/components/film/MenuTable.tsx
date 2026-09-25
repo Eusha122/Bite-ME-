@@ -14,7 +14,7 @@ import { lenis } from "./SmoothScroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export type FilmMeta = { frames: number; perClip: number; clips: number; aspect: number; mobileAspect?: number; bg: string; version?: number };
+export type FilmMeta = { frames: number; perClip: number; clips: number; aspect: number; mobileAspect?: number; mobileStride?: number; bg: string; version?: number };
 
 /*
  * The rotating table, in STEP mode.
@@ -116,6 +116,10 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     let lastDish = -1;
 
     const narrow = () => cv.clientWidth / cv.clientHeight < 1;
+    const releaseFrames = () => {
+      seq?.dispose();
+      seq = null;
+    };
     const vh = () => window.innerHeight;
     const dishY = (k: number) => sec.offsetTop + k * vh();
     /** true while the table is pinned and we own the scroll gestures */
@@ -271,18 +275,18 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
       },
     });
 
-    const warm = ScrollTrigger.create({
-      trigger: sec,
-      start: "top 600%",
-      once: true,
-      onEnter: () => {
-        // phones get the cropped, full-detail frames; remember their proportions for drawing
-        const phone = narrow();
-        frameAspect = phone ? (meta.mobileAspect ?? meta.aspect) : meta.aspect;
-        seq = loadSequence(`/film/table/${phone ? "m" : "d"}`, meta.frames, meta.version ?? 0);
-        seq.onFirst.then(() => (dirty = true));
-      },
-    });
+    const startLoading = () => {
+      if (seq) return;
+      // phones get the cropped, lighter frames; remember their proportions for drawing
+      const phone = narrow();
+      frameAspect = phone ? (meta.mobileAspect ?? meta.aspect) : meta.aspect;
+      drawnLoaded = -1;
+      dirty = true;
+      seq = loadSequence(`/film/table/${phone ? "m" : "d"}`, meta.frames, meta.version ?? 0, phone ? (meta.mobileStride ?? 1) : 1);
+      seq.onFirst.then(() => (dirty = true));
+    };
+    // the table's frames are the heaviest on the page: load them shortly before it arrives, release them once well past
+    const warm = ScrollTrigger.create({ trigger: sec, start: "top 400%", end: "bottom -150%", onEnter: startLoading, onEnterBack: startLoading, onLeave: releaseFrames, onLeaveBack: releaseFrames });
 
     resize();
     gsap.ticker.add(draw);
@@ -295,6 +299,7 @@ export default function MenuTable({ meta }: { meta: FilmMeta }) {
     return () => {
       st.kill();
       warm.kill();
+      releaseFrames();
       tween?.kill();
       gsap.ticker.remove(draw);
       window.removeEventListener("wheel", onWheel, { capture: true });

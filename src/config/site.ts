@@ -15,6 +15,19 @@ export const site = {
   deliveryAreas: ["Banani", "Gulshan 1 & 2", "Baridhara", "Niketan", "Mohakhali DOHS"],
   /** time slots offered on the reservation page */
   reservationSlots: ["12:30", "13:30", "14:30", "18:00", "19:00", "20:00", "21:00", "22:00"],
+  /**
+   * Company details printed in the footer and the legal pages. These are PLACEHOLDERS —
+   * each restaurant must replace them with its real registered details before launch.
+   */
+  legal: {
+    companyName: "BiteME Hospitality Ltd.",
+    tradeLicense: "TRAD/DNCC/000000/2026",
+    vatBin: "000000000-0000",
+    registeredAddress: "House 42, Road 11, Banani, Dhaka 1213, Bangladesh",
+    grievanceEmail: "care@biteme.bd",
+    /** when the legal pages were last reviewed */
+    updated: "1 September 2026",
+  },
   hours: [
     { days: "Sat – Thu", time: "12:00 PM – 11:30 PM" },
     { days: "Friday", time: "2:30 PM – 12:00 AM" },

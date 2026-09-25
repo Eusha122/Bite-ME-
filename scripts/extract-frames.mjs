@@ -1,7 +1,7 @@
 // Turn one or more film clips into a single scroll-scrubbable image sequence.
 // Usage: node scripts/extract-frames.mjs <name> <framesPerClip> <clip1.mp4> [clip2.mp4 ...]
 //   → public/film/<name>/d/000.webp  (desktop, 1440px wide)
-//   → public/film/<name>/m/000.webp  (phones: the middle MOBILE_CROP of a 1600px frame, full detail)
+//   → public/film/<name>/m/000.webp  (phones: the middle MOBILE_CROP of the frame, every MOBILE_STRIDE-th frame, MOBILE_HEIGHT tall)
 //   → public/film/<name>/meta.json   { frames, perClip, clips, aspect, mobileAspect, bg, version }
 // Clips are concatenated in order, so chained clips (end frame = next start frame) play as one film.
 import { spawnSync } from "node:child_process";
@@ -23,6 +23,11 @@ const Q_D = Number(process.env.FRAME_Q ?? 70);
 // are cropped to that middle and keep full resolution there — much sharper than shrinking the whole frame.
 const Q_M = Number(process.env.FRAME_QM ?? Q_D);
 const MOBILE_CROP = Number(process.env.MOBILE_CROP ?? 0.6); // fraction of the frame width phones keep
+// Phone memory budget: a decoded frame costs width×height×4 bytes, and a table film is hundreds of them.
+// Phones therefore get every MOBILE_STRIDE-th frame (the page cross-fades between neighbours, so motion
+// stays smooth) at MOBILE_HEIGHT pixels tall — about 4× lighter than full-size frames.
+const MOBILE_STRIDE = Number(process.env.MOBILE_STRIDE ?? 2);
+const MOBILE_HEIGHT = Number(process.env.MOBILE_HEIGHT ?? 720);
 const MASTER_WIDTH = 1600; // intermediate frames; desktop is resized to 1440 from these, phones are cropped from them
 const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "public", "film", name);
@@ -71,16 +76,20 @@ for (const [i, src] of pngs.entries()) {
   const d = await sharp(graded).resize(1440).webp({ quality: Q_D, effort: 6 }).toFile(path.join(out, "d", `${id}.webp`));
   const full = await sharp(graded).metadata();
   const cropW = Math.round((full.width * MOBILE_CROP) / 2) * 2;
-  const m = await sharp(graded)
-    .extract({ left: Math.round((full.width - cropW) / 2), top: 0, width: cropW, height: full.height })
-    .webp({ quality: Q_M, effort: 6 })
-    .toFile(path.join(out, "m", `${id}.webp`));
   bytesD += d.size;
-  bytesM += m.size;
   aspect = d.width / d.height;
-  mobileAspect = m.width / m.height;
+  if (i % MOBILE_STRIDE === 0) {
+    const mid = String(i / MOBILE_STRIDE).padStart(3, "0");
+    const m = await sharp(graded)
+      .extract({ left: Math.round((full.width - cropW) / 2), top: 0, width: cropW, height: full.height })
+      .resize({ height: MOBILE_HEIGHT })
+      .webp({ quality: Q_M, effort: 6 })
+      .toFile(path.join(out, "m", `${mid}.webp`));
+    bytesM += m.size;
+    mobileAspect = m.width / m.height;
+  }
 }
 
-await fs.writeFile(path.join(out, "meta.json"), JSON.stringify({ frames: pngs.length, perClip: PER, clips: clips.length, aspect, mobileAspect, bg, version: Date.now() }, null, 2));
+await fs.writeFile(path.join(out, "meta.json"), JSON.stringify({ frames: pngs.length, perClip: PER, clips: clips.length, aspect, mobileAspect, mobileStride: MOBILE_STRIDE, bg, version: Date.now() }, null, 2));
 await fs.rm(tmp, { recursive: true, force: true });
 console.log(`✓ ${name}: ${pngs.length} frames from ${clips.length} clip(s) · desktop ${(bytesD / 1e6).toFixed(1)} MB · mobile ${(bytesM / 1e6).toFixed(1)} MB · bg graded to ${bg} (gain ${gain.map((g) => g.toFixed(3)).join("/")})`);

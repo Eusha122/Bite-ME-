@@ -6,8 +6,7 @@ import { cuisineName, formatBDT, type Dish } from "@/config/menu";
 import { site } from "@/config/site";
 import { useCart, flyToCart } from "@/lib/cart";
 import DishImage from "../DishImage";
-
-const PAYMENT_NAMES: Record<string, string> = { bkash: "bKash", nagad: "Nagad", card: "cards", cod: "cash" };
+import { PayLogo } from "../PayLogos";
 
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -37,8 +36,6 @@ function Panel({ dish, related, onClose, onSelect }: { dish: Dish; related: Dish
     if (r) flyToCart(dish.image, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
     onClose();
   };
-
-  const payments = site.payments.map((p) => PAYMENT_NAMES[p]).join(", ").replace(/, ([^,]*)$/, " or $1");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[1.05fr_1fr]">
@@ -77,7 +74,15 @@ function Panel({ dish, related, onClose, onSelect }: { dish: Dish; related: Dish
             <Info label="Pickup">Ready in about 20 min at {site.address.split(",").slice(0, 2).join(",")}</Info>
             <Info label="Dine-in">Scan the QR code on your table and order from your phone</Info>
             <Info label="Payment">
-              {payments} · VAT {Math.round(site.delivery.vatRate * 100)}% added at checkout
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {site.payments
+                  .filter((p) => p !== "cod")
+                  .map((p) => (
+                    <PayLogo key={p} method={p} className="h-6" />
+                  ))}
+                <span>or cash</span>
+              </span>
+              <span className="mt-1 block text-xs font-semibold text-ink-2">VAT {Math.round(site.delivery.vatRate * 100)}% added at checkout</span>
             </Info>
           </dl>
 
